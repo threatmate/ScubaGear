@@ -287,14 +287,6 @@
       "supportsExclusions": false,
       "showInApp": true,
       "showInViewer": true
-    },
-    {
-      "id": "SecuritySuite",
-      "name": "SecuritySuite",
-      "displayName": "Defender Security Suite (securitysuite)",
-      "supportsExclusions": true,
-      "showInApp": true,
-      "showInViewer": true
     }
   ],
   "M365Environment": [
