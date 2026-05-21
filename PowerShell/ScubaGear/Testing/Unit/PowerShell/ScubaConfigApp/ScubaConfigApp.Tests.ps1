@@ -506,7 +506,7 @@ InModuleScope ScubaConfigApp {
             }
 
             It 'Should contain main XAML file' {
-                $mainXamlPath = Join-Path $xamlResourcesPath "ScubaConfigAppUI.xaml"
+                $mainXamlPath = Join-Path -Path $xamlResourcesPath -ChildPath "ScubaConfigAppUI.xaml"
                 Test-Path $mainXamlPath | Should -BeTrue -Because "Main XAML file should exist in resources directory"
             }
         }

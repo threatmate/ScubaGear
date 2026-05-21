@@ -1,4 +1,4 @@
-Function Show-YamlImportProgress {
+﻿Function Show-YamlImportProgress {
     <#
     .SYNOPSIS
     Shows a progress window during YAML import operations.
