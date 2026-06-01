@@ -885,7 +885,6 @@ Function Invoke-RequiredFieldValidation {
             # Navigate to the first tab that contains a pending policy.
             # Exclusions tab covers Pass-1 (product exclusion) migrations;
             # fall back to AnnotationsPolicyTab for Pass-2 only migrations.
-            $exclusionData  = $syncHash.ExclusionData
             $hasPendingExclusion = $syncHash.MigrationPendingReview | Where-Object {
                 $_ -like 'Exclusions|*'
             }
