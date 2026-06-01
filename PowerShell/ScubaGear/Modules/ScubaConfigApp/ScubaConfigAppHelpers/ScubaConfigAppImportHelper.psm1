@@ -242,16 +242,102 @@ Function Invoke-YamlImportWithProgress {
         # Step 2: Parse YAML
         $progress.UpdateMessage.Invoke("Parsing YAML content...", "Converting to data structures")
         Start-Sleep -Milliseconds 200
+
+        # Pre-process: extract GUID display names from inline YAML comments (e.g. "- guid #DisplayName")
+        # ConvertFrom-Yaml strips comments, so we harvest them from raw text before parsing.
+        if ($syncHash.IdDisplayNameCache) { $syncHash.IdDisplayNameCache.Clear() }
+        foreach ($line in ($yamlContent -split "`r?`n")) {
+            if ($line -match '^\s*-\s+([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\s+#(.+)$') {
+                $syncHash.IdDisplayNameCache[$matches[1]] = $matches[2].Trim()
+            }
+        }
+
         $yamlHash = $yamlContent | ConvertFrom-Yaml
+
+        # Step 2.5: If Graph is connected, resolve any IDs not already covered by inline comments.
+        # Which YAML field names contain raw object IDs is determined entirely by the graphQueries
+        # configuration - specifically entries whose outProperty is "id".  No field names are
+        # hardcoded here; the config drives the discovery.
+        if ($syncHash.GraphConnected) {
+            $progress.UpdateMessage.Invoke("Resolving display names...", "Looking up IDs via Microsoft Graph")
+
+            # Build the set of field names that store raw object IDs from the control config.
+            $guidFieldNames = @{}
+            $syncHash.UIConfigs.graphQueries.PSObject.Properties |
+                Where-Object { $_.Value.outProperty -eq 'id' } |
+                ForEach-Object { $guidFieldNames[$_.Name] = $true }
+
+            if ($guidFieldNames.Count -gt 0) {
+                # Walk the parsed YAML iteratively and collect IDs from those fields.
+                $uncachedIds = [System.Collections.Generic.List[string]]::new()
+                $stack = [System.Collections.Generic.Stack[object]]::new()
+                $stack.Push($yamlHash)
+
+                while ($stack.Count -gt 0) {
+                    $node = $stack.Pop()
+                    if ($node -is [hashtable] -or $node -is [System.Collections.IDictionary]) {
+                        foreach ($key in @($node.Keys)) {
+                            $val = $node[$key]
+                            if ($guidFieldNames.ContainsKey($key) -and
+                                $val -is [System.Collections.IEnumerable] -and
+                                $val -isnot [string]) {
+                                # Collect IDs not already in the cache (GUID format check is a
+                                # sanity guard; the field name from config is the real selector).
+                                foreach ($item in $val) {
+                                    if ($item -is [string] -and
+                                        $item -match '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' -and
+                                        -not $syncHash.IdDisplayNameCache[$item]) {
+                                        $uncachedIds.Add($item)
+                                    }
+                                }
+                            } elseif ($val -is [hashtable] -or $val -is [System.Collections.IDictionary]) {
+                                $stack.Push($val)
+                            }
+                        }
+                    }
+                }
+
+                $uniqueUncachedIds = @($uncachedIds | Sort-Object -Unique)
+                if ($uniqueUncachedIds.Count -gt 0) {
+                    $progress.UpdateMessage.Invoke(
+                        "Resolving display names...",
+                        "Querying Graph for $($uniqueUncachedIds.Count) object ID(s)...")
+
+                    Write-DebugOutput -Message "Resolving $($uniqueUncachedIds.Count) uncached IDs via Graph" -Source $MyInvocation.MyCommand -Level "Info"
+                    $resolvedNames = Resolve-GraphIdsBatch -Ids $uniqueUncachedIds
+
+                    # Populate display-name cache for found IDs.
+                    foreach ($id in $resolvedNames.Keys) {
+                        $syncHash.IdDisplayNameCache[$id] = $resolvedNames[$id]
+                    }
+
+                    # Track IDs that Graph did not return - object may have been deleted.
+                    if ($syncHash.OrphanedIds) { $syncHash.OrphanedIds.Clear() }
+                    $notFound = @($uniqueUncachedIds | Where-Object { -not $resolvedNames.ContainsKey($_) })
+                    foreach ($id in $notFound) { $syncHash.OrphanedIds[$id] = $true }
+
+                    if ($notFound.Count -gt 0) {
+                        $progress.UpdateMessage.Invoke(
+                            "Resolving display names...",
+                            "$($resolvedNames.Count) resolved, $($notFound.Count) not found in directory")
+                        Write-DebugOutput -Message "$($notFound.Count) ID(s) not found in Graph: $($notFound -join ', ')" -Source $MyInvocation.MyCommand -Level "Warning"
+                        Start-Sleep -Milliseconds 600
+                    }
+                }
+            }
+            Start-Sleep -Milliseconds 200
+        }
 
         # Step 3: Clear existing data
         $progress.UpdateMessage.Invoke("Preparing for import...", "Clearing existing configuration")
         Start-Sleep -Milliseconds 200
-        $syncHash.ExclusionData = [ordered]@{}
-        $syncHash.OmissionData = [ordered]@{}
-        $syncHash.AnnotationData = [ordered]@{}
-        $syncHash.GeneralSettingsData = [ordered]@{}
-        $syncHash.AdvancedSettingsData = [ordered]@{}
+        # Clear in-place rather than replacing so card closures that captured these object
+        # references at creation time continue to point at the live data stores.
+        $syncHash.ExclusionData.Clear()
+        $syncHash.OmissionData.Clear()
+        $syncHash.AnnotationData.Clear()
+        $syncHash.GeneralSettingsData.Clear()
+        $syncHash.AdvancedSettingsData.Clear()
 
         # Step 4: Import data structures (migration runs automatically inside)
         $progress.UpdateMessage.Invoke("Importing configuration data...", "Processing YAML sections")
@@ -284,16 +370,46 @@ Function Invoke-YamlImportWithProgress {
         }
         # Show migration report if legacy policies were remapped (only on success)
         if ($importSucceeded -and $syncHash.MigrationLog -and $syncHash.MigrationLog.Count -gt 0) {
-            $count   = $syncHash.MigrationLog.Count
-            $bullet  = [char]0x2022
-            $details = ($syncHash.MigrationLog | Select-Object -First 20 | ForEach-Object { "$bullet $_" }) -join "`n"
-            if ($count -gt 20) { $details += "`n$bullet ... and $($count - 20) more change(s)" }
-            $msg = "This configuration file contained $count legacy policy setting(s) that were automatically migrated to their SecuritySuite equivalents:`n`n$details`n`nPlease review the updated settings before saving."
+            $bullet    = [char]0x2022
+            $migCfg    = $syncHash.UIConfigs.policyMigration
+            $rptCfg    = $migCfg.localeReportWindow
+            $maxLines  = [int]$migCfg.reportMaxLinesPerSection
+
+            $migrated  = @($syncHash.MigrationLog | Where-Object { $_ -match "^$($rptCfg.sections.migrated.prefix)"  })
+            $decoupled = @($syncHash.MigrationLog | Where-Object { $_ -match "^$($rptCfg.sections.decoupled.prefix)" })
+            $dropped   = @($syncHash.MigrationLog | Where-Object { $_ -match "^$($rptCfg.sections.dropped.prefix)"   })
+
+            $sections = [System.Collections.ArrayList]::new()
+
+            if ($migrated.Count -gt 0) {
+                $heading = $rptCfg.sections.migrated.heading -f $migrated.Count
+                $lines   = ($migrated | Select-Object -First $maxLines | ForEach-Object { "$bullet $_" }) -join "`n"
+                if ($migrated.Count -gt $maxLines) { $lines += "`n$bullet ... and $($migrated.Count - $maxLines) more" }
+                [void]$sections.Add("$heading`n$lines")
+            }
+            if ($decoupled.Count -gt 0) {
+                $heading = $rptCfg.sections.decoupled.heading -f $decoupled.Count
+                $body    = $rptCfg.sections.decoupled.body
+                $lines   = ($decoupled | ForEach-Object { "$bullet $_" }) -join "`n"
+                [void]$sections.Add("$heading`n$body`n$lines")
+            }
+            if ($dropped.Count -gt 0) {
+                $heading = $rptCfg.sections.dropped.heading -f $dropped.Count
+                $lines   = ($dropped | ForEach-Object { "$bullet $_" }) -join "`n"
+                [void]$sections.Add("$heading`n$lines")
+            }
+
+            $total = $syncHash.MigrationLog.Count
+            $msg   = ($rptCfg.intro -f $total) + "`n`n" +
+                     ($sections -join "`n`n") +
+                     "`n`n" + $rptCfg.outro
+
+            $icon = if ($decoupled.Count -gt 0) { [System.Windows.MessageBoxImage]::Warning } else { [System.Windows.MessageBoxImage]::Information }
             $syncHash.ShowMessageBox.Invoke(
                 $msg,
-                "Legacy Policy Migration Applied",
+                $rptCfg.title,
                 [System.Windows.MessageBoxButton]::OK,
-                [System.Windows.MessageBoxImage]::Warning
+                $icon
             )
             $syncHash.MigrationLog = @()
         }
@@ -477,106 +593,43 @@ Function Import-YamlToDataStructures {
 # Legacy Policy Migration Functions
 # Automatically migrates old Defender/EXO policy settings found in imported
 # YAML files to their SecuritySuite equivalents using the mapping defined in
-# removedpolicies.md.
+# mappings\scuba-baseline-policy-migrations.csv.
 # =============================================================================
-
-Function ConvertTo-MigrationEntry {
-    <#
-    .SYNOPSIS
-    Parses a block of lines for a single removed policy entry from removedpolicies.md.
-    .DESCRIPTION
-    Private helper for Get-PolicyMigrationMap. Extracts the old policy ID, old product,
-    new policy ID, and new product from a removed-policy block in removedpolicies.md.
-    #>
-    param(
-        [string]$PolicyId,
-        [string[]]$Lines,
-        [hashtable]$ProductCodeMap
-    )
-
-    # Derive old product from policy ID segment (e.g., MS.DEFENDER.1.1v1 → DEFENDER → Defender)
-    $oldProduct = $null
-    if ($PolicyId -match '^MS\.([A-Z]+)\.') {
-        $code = $matches[1]
-        $oldProduct = if ($ProductCodeMap.ContainsKey($code)) { $ProductCodeMap[$code] } else { $code }
-    }
-
-    # Extract the rationale note for logging
-    $rationaleText   = $Lines | Where-Object { $_ -match '_Removal rationale:_' } | Select-Object -First 1
-    $migratesToLine  = $Lines | Where-Object { $_ -match '_Migrates to:_' }       | Select-Object -First 1
-    $newPolicyId     = $null
-    $newProduct      = $null
-    $allNewPolicyIds = @()
-    $migrationNote   = ''
-
-    if ($rationaleText) {
-        $migrationNote = ($rationaleText -replace '^\s*-\s*_Removal rationale:_\s*', '').Trim()
-    }
-
-    if ($migratesToLine) {
-        # Preferred: use the structured _Migrates to:_ field for an exact, unambiguous target
-        $migratesTo = ($migratesToLine -replace '^\s*-\s*_Migrates to:_\s*', '').Trim().TrimEnd('.')
-        if ($migratesTo -ne 'None' -and $migratesTo -match '^MS\.') {
-            $newPolicyId     = $migratesTo
-            $allNewPolicyIds = @($migratesTo)
-        }
-    } elseif ($rationaleText) {
-        # Fallback: extract the first policy ID found in the rationale text
-        # @() ensures a single match stays an array rather than a scalar string
-        $allNewPolicyIds = @([regex]::Matches($rationaleText, 'MS\.[A-Z]+\.\d+\.\d+v\d+') |
-                             Select-Object -ExpandProperty Value)
-        $newPolicyId     = if ($allNewPolicyIds.Count -gt 0) { $allNewPolicyIds[0] } else { $null }
-    }
-
-    if ($newPolicyId -and $newPolicyId -match '^MS\.([A-Z]+)\.') {
-        $code       = $matches[1]
-        $newProduct = if ($ProductCodeMap.ContainsKey($code)) { $ProductCodeMap[$code] } else { $code }
-    }
-
-    return [PSCustomObject]@{
-        oldPolicyId     = $PolicyId
-        oldProduct      = $oldProduct
-        newPolicyId     = $newPolicyId
-        newProduct      = $newProduct
-        allNewPolicyIds = $allNewPolicyIds
-        migrationNote   = $migrationNote
-    }
-}
 
 Function Get-PolicyMigrationMap {
     <#
     .SYNOPSIS
-    Builds or retrieves a cached policy migration map from removedpolicies.md.
+    Builds or retrieves a cached policy migration map from the migrations CSV.
     .DESCRIPTION
-    Parses the ScubaGear removedpolicies.md file to build a JSON migration map that
-    maps old Defender/EXO policy IDs to their SecuritySuite equivalents. The resulting
-    map is cached to $env:TEMP\ScubaConfigApp_PolicyMigrationMap.json for performance.
-    The cache is invalidated automatically when the source file is newer.
+    Reads PowerShell\ScubaGear\mappings\scuba-baseline-policy-migrations.csv to build
+    a migration map that maps old Defender/EXO policy IDs to their SecuritySuite
+    equivalents. The resulting map is cached to
+    $env:TEMP\ScubaConfigApp_PolicyMigrationMap.json for performance. The cache is
+    invalidated automatically when the source CSV is newer.
     .OUTPUTS
     Hashtable keyed by old policy ID, each value a PSCustomObject with:
       oldPolicyId, oldProduct, newPolicyId, newProduct, allNewPolicyIds, migrationNote.
-    Returns an empty hashtable if the source file cannot be found.
+    Returns an empty hashtable if the CSV cannot be found.
     #>
 
-    $cacheFile = Join-Path $env:TEMP 'ScubaConfigApp_PolicyMigrationMap.json'
+    $migCfg    = $syncHash.UIConfigs.policyMigration
+    $cacheFile = Join-Path $env:TEMP $migCfg.cacheFileName
 
-    # Locate removedpolicies.md using the same resolution path as offline baseline loading
-    $moduleDir           = Split-Path $syncHash.UIConfigPath -Parent
-    $offlinePath         = $syncHash.UIConfigs.OfflineBaselineMarkdownPath
-    $baselineDir         = Join-Path $moduleDir $offlinePath
-    $removedPoliciesPath = Join-Path $baselineDir 'removedpolicies.md'
+    # Locate the CSV using the path stored in the JSON config
+    $moduleDir = Split-Path $syncHash.UIConfigPath -Parent
+    $csvPath   = Join-Path $moduleDir $syncHash.UIConfigs.PolicyMigrationsCSVPath
 
     try {
-        $removedPoliciesPath = (Resolve-Path $removedPoliciesPath -ErrorAction Stop).Path
+        $csvPath = (Resolve-Path $csvPath -ErrorAction Stop).Path
     } catch {
-        Write-DebugOutput -Message "removedpolicies.md not found at: $removedPoliciesPath" -Source $MyInvocation.MyCommand -Level "Warning"
+        Write-DebugOutput -Message "Migration CSV not found at: $csvPath" -Source $MyInvocation.MyCommand -Level "Warning"
         return @{}
     }
 
     # Return cached map when it is still current
     if (Test-Path $cacheFile) {
         $cacheAge  = (Get-Item $cacheFile).LastWriteTime
-        $sourceAge = (Get-Item $removedPoliciesPath).LastWriteTime
+        $sourceAge = (Get-Item $csvPath).LastWriteTime
         if ($cacheAge -ge $sourceAge) {
             try {
                 $cached = Get-Content $cacheFile -Raw | ConvertFrom-Json
@@ -590,67 +643,70 @@ Function Get-PolicyMigrationMap {
         }
     }
 
-    # Build the migration map by parsing removedpolicies.md
-    Write-DebugOutput -Message "Building policy migration map from: $removedPoliciesPath" -Source $MyInvocation.MyCommand -Level "Info"
+    Write-DebugOutput -Message "Building policy migration map from CSV: $csvPath" -Source $MyInvocation.MyCommand -Level "Info"
 
-    $productCodeMap = @{
-        'DEFENDER'      = 'Defender'
-        'EXO'           = 'Exo'
-        'AAD'           = 'Aad'
-        'POWERBI'       = 'PowerBI'
-        'POWERPLATFORM' = 'PowerPlatform'
-        'SHAREPOINT'    = 'Sharepoint'
-        'TEAMS'         = 'Teams'
-        'SECURITYSUITE' = 'SecuritySuite'
+    # Build product code map from the products list: uppercase id -> id (e.g. SECURITYSUITE -> SecuritySuite)
+    # Legacy products (e.g. DEFENDER) are not in the list; they fall back to the raw uppercase code.
+    $productCodeMap = @{}
+    foreach ($product in $syncHash.UIConfigs.products) { $productCodeMap[$product.id.ToUpper()] = $product.id }
+    $colOldId    = $migCfg.csvColumns.oldId
+    $colNewId    = $migCfg.csvColumns.newId
+    $colRationale= $migCfg.csvColumns.rationale
+    $typeRemoved  = $migCfg.migrationTypes.removed
+    $typeDecoupled= $migCfg.migrationTypes.decoupled
+    $typeDirect   = $migCfg.migrationTypes.direct
+
+    $migrations   = [System.Collections.ArrayList]::new()
+    $migrationMap = @{}
+
+    foreach ($row in (Import-Csv -Path $csvPath)) {
+        $oldPolicyId = $row.$colOldId.Trim()
+        if ([string]::IsNullOrWhiteSpace($oldPolicyId)) { continue }
+
+        # Derive old product from policy ID (e.g. MS.DEFENDER.1.1v1 → Defender)
+        $oldProduct = $null
+        if ($oldPolicyId -match '^MS\.([A-Z]+)\.') {
+            $code = $matches[1]
+            $oldProduct = if ($productCodeMap.ContainsKey($code)) { $productCodeMap[$code] } else { $code }
+        }
+
+        # New ID may be "None", a single ID, or a range like "MS.X.1.1v1 - MS.X.1.4v1"
+        # Extract all policy IDs present; use the first as the canonical migration target.
+        $rawNewId        = $row.$colNewId.Trim()
+        $allNewPolicyIds = @([regex]::Matches($rawNewId, 'MS\.[A-Z]+\.\d+\.\d+v\d+') |
+                             Select-Object -ExpandProperty Value)
+        $newPolicyId     = if ($allNewPolicyIds.Count -gt 0) { $allNewPolicyIds[0] } else { $null }
+
+        # Derive new product from new policy ID
+        $newProduct = $null
+        if ($newPolicyId -and $newPolicyId -match '^MS\.([A-Z]+)\.') {
+            $code = $matches[1]
+            $newProduct = if ($productCodeMap.ContainsKey($code)) { $productCodeMap[$code] } else { $code }
+        }
+
+        $migrationType = if (-not $newPolicyId)               { $typeRemoved   }
+                        elseif ($allNewPolicyIds.Count -gt 1)  { $typeDecoupled }
+                        else                                   { $typeDirect    }
+
+        $entry = [PSCustomObject]@{
+            oldPolicyId     = $oldPolicyId
+            oldProduct      = $oldProduct
+            newPolicyId     = $newPolicyId
+            newProduct      = $newProduct
+            allNewPolicyIds = $allNewPolicyIds
+            migrationNote   = $row.$colRationale.Trim()
+            migrationType   = $migrationType
+        }
+        $migrationMap[$oldPolicyId] = $entry
+        [void]$migrations.Add($entry)
     }
 
-    $migrations       = [System.Collections.ArrayList]::new()
-    $migrationMap     = @{}
-    $inRemovedSection = $false
-    $currentPolicyId  = $null
-    $policyLineBuffer = @()
-
-    foreach ($line in (Get-Content $removedPoliciesPath)) {
-        if ($line -match '^## Removed Policies') {
-            $inRemovedSection = $true
-            continue
-        }
-        # Another top-level heading ends the Removed Policies section
-        if ($inRemovedSection -and $line -match '^## ' -and $line -notmatch '^## Removed Policies') {
-            if ($currentPolicyId -and $policyLineBuffer.Count -gt 0) {
-                $entry = ConvertTo-MigrationEntry -PolicyId $currentPolicyId -Lines $policyLineBuffer -ProductCodeMap $productCodeMap
-                if ($entry) { [void]$migrations.Add($entry); $migrationMap[$entry.oldPolicyId] = $entry }
-            }
-            $inRemovedSection = $false
-            continue
-        }
-        if (-not $inRemovedSection) { continue }
-
-        if ($line -match '^#### (MS\.[A-Z]+\.\d+\.\d+v\d+)') {
-            # Flush the previously buffered policy block before starting a new one
-            if ($currentPolicyId -and $policyLineBuffer.Count -gt 0) {
-                $entry = ConvertTo-MigrationEntry -PolicyId $currentPolicyId -Lines $policyLineBuffer -ProductCodeMap $productCodeMap
-                if ($entry) { [void]$migrations.Add($entry); $migrationMap[$entry.oldPolicyId] = $entry }
-            }
-            $currentPolicyId  = $matches[1]
-            $policyLineBuffer  = @()
-        } elseif ($currentPolicyId) {
-            $policyLineBuffer += $line
-        }
-    }
-
-    # Flush the final buffered policy block
-    if ($currentPolicyId -and $policyLineBuffer.Count -gt 0) {
-        $entry = ConvertTo-MigrationEntry -PolicyId $currentPolicyId -Lines $policyLineBuffer -ProductCodeMap $productCodeMap
-        if ($entry) { [void]$migrations.Add($entry); $migrationMap[$entry.oldPolicyId] = $entry }
-    }
-
-    # Persist the migration map to the cache file
+    # Persist to cache
     try {
         $cacheObj = [ordered]@{
             version     = '1.0'
             generatedAt = (Get-Date -Format 'o')
-            sourceFile  = $removedPoliciesPath
+            sourceFile  = $csvPath
             migrations  = $migrations.ToArray()
         }
         $cacheObj | ConvertTo-Json -Depth 6 | Out-File -FilePath $cacheFile -Encoding utf8 -Force
@@ -671,9 +727,9 @@ Function Invoke-PolicyMigration {
     ConvertFrom-Yaml. Two classes of data are handled:
 
       1. Product-level exclusion keys  (e.g., "Defender", "Exo") containing old
-         policy IDs — moved to the correct new product key with the new policy ID.
+         policy IDs - moved to the correct new product key with the new policy ID.
       2. Annotation/omission keys (e.g., "AnnotatePolicy", "OmitPolicy") containing
-         old policy IDs as keys — remapped to the corresponding new policy IDs.
+         old policy IDs as keys - remapped to the corresponding new policy IDs.
 
     Policies removed with no SecuritySuite replacement are silently dropped with a
     note in the migration log.
@@ -690,13 +746,36 @@ Function Invoke-PolicyMigration {
         $Config
     )
 
-    $syncHash.MigrationLog = [System.Collections.ArrayList]::new()
+    $syncHash.MigrationLog           = [System.Collections.ArrayList]::new()
+    $syncHash.MigrationPendingReview  = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
+    # Helper: returns $true only if $policyId has a renderable card for $controlType.
+    # A card is renderable when the policy exists in Baselines with a non-'none' fieldControlName value,
+    # OR the control supports all products (annotations/omissions always render).
+    $HasRenderableCard = {
+        param([string]$ControlType, [string]$ProductId, [string]$PolicyId)
+        $ctrl = $syncHash.UIConfigs.baselineControls | Where-Object { $_.controlType -eq $ControlType } | Select-Object -First 1
+        if (-not $ctrl) { return $false }
+        if ($ctrl.supportsAllProducts) { return $true }   # annotations/omissions always render
+        $baseline = $syncHash.Baselines.($ProductId) | Where-Object { $_.id -eq $PolicyId } | Select-Object -First 1
+        if (-not $baseline) { return $false }
+        $fieldVal = $baseline.($ctrl.fieldControlName)
+        return ($fieldVal -and $fieldVal -ne 'none')
+    }
 
     $migrationMap = Get-PolicyMigrationMap
     if ($migrationMap.Count -eq 0) {
         Write-DebugOutput -Message "No migration map loaded; skipping legacy policy migration" -Source $MyInvocation.MyCommand -Level "Info"
         return $Config
     }
+
+    # Load log prefix tokens and migration type labels from the JSON config
+    $migCfg         = $syncHash.UIConfigs.policyMigration
+    $pfxMigrated    = $migCfg.localeReportWindow.sections.migrated.prefix
+    $pfxDecoupled   = $migCfg.localeReportWindow.sections.decoupled.prefix
+    $pfxSkipped     = $migCfg.localeReportWindow.sections.skipped.prefix
+    $pfxDropped     = $migCfg.localeReportWindow.sections.dropped.prefix
+    $typeDecoupled  = $migCfg.migrationTypes.decoupled
 
     # Collect the yamlValue keys used by annotation/omission controls so they are
     # not treated as product exclusion blocks in Pass 1.
@@ -707,7 +786,7 @@ Function Invoke-PolicyMigration {
     )
 
     #---------------------------------------------------------------------------
-    # Pass 1 — Product-level exclusion blocks
+    # Pass 1 - Product-level exclusion blocks
     #   YAML: <ProductKey> → <OldPolicyId> → exclusion data
     #   Goal: move old policy ID to <NewProductKey>/<NewPolicyId>
     #---------------------------------------------------------------------------
@@ -726,7 +805,7 @@ Function Invoke-PolicyMigration {
             if (-not $entry.newPolicyId -or -not $entry.newProduct) {
                 $productData.Remove($oldPolicyId)
                 [void]$syncHash.MigrationLog.Add(
-                    "DROPPED exclusion [$productKey][$oldPolicyId] - no replacement policy. Rationale: $($entry.migrationNote)")
+                    "$pfxDropped exclusion [$productKey][$oldPolicyId] - no replacement policy. Rationale: $($entry.migrationNote)")
                 Write-DebugOutput -Message "Dropped removed-policy exclusion: [$productKey][$oldPolicyId]" -Source $MyInvocation.MyCommand -Level "Warning"
                 continue
             }
@@ -742,12 +821,22 @@ Function Invoke-PolicyMigration {
 
             if (-not ($targetData.Keys -contains $newPolicyId)) {
                 $targetData[$newPolicyId] = $productData[$oldPolicyId]
-                [void]$syncHash.MigrationLog.Add(
-                    "MIGRATED exclusion [$productKey][$oldPolicyId] → [$newProductKey][$newPolicyId]")
+                if ($entry.migrationType -eq $typeDecoupled) {
+                    [void]$syncHash.MigrationLog.Add(
+                        "$pfxDecoupled exclusion [$productKey][$oldPolicyId] → [$newProductKey][$newPolicyId] (policy split into: $($entry.allNewPolicyIds -join ', '))")
+                } else {
+                    [void]$syncHash.MigrationLog.Add(
+                        "$pfxMigrated exclusion [$productKey][$oldPolicyId] → [$newProductKey][$newPolicyId]")
+                }
                 Write-DebugOutput -Message "Migrated exclusion: [$productKey][$oldPolicyId] → [$newProductKey][$newPolicyId]" -Source $MyInvocation.MyCommand -Level "Info"
+                if (& $HasRenderableCard 'Exclusions' $newProductKey $newPolicyId) {
+                    [void]$syncHash.MigrationPendingReview.Add("Exclusions|$newPolicyId")
+                } else {
+                    Write-DebugOutput -Message "Skipping MigrationPendingReview for [$newPolicyId]: no renderable Exclusion card" -Source $MyInvocation.MyCommand -Level "Info"
+                }
             } else {
                 [void]$syncHash.MigrationLog.Add(
-                    "SKIPPED exclusion [$productKey][$oldPolicyId] → [$newProductKey][$newPolicyId] (target already configured)")
+                    "$pfxSkipped exclusion [$productKey][$oldPolicyId] → [$newProductKey][$newPolicyId] (target already configured)")
                 Write-DebugOutput -Message "Migration skipped - target already configured: [$newProductKey][$newPolicyId]" -Source $MyInvocation.MyCommand -Level "Warning"
             }
             $productData.Remove($oldPolicyId)
@@ -761,7 +850,7 @@ Function Invoke-PolicyMigration {
     }
 
     #---------------------------------------------------------------------------
-    # Pass 2 — Annotation / omission keys (AnnotatePolicy, OmitPolicy, etc.)
+    # Pass 2 - Annotation / omission keys (AnnotatePolicy, OmitPolicy, etc.)
     #   YAML: <yamlValue> → <OldPolicyId> → field data
     #   Goal: remap old policy ID key to new policy ID key
     #---------------------------------------------------------------------------
@@ -771,6 +860,9 @@ Function Invoke-PolicyMigration {
         $controlData = $Config[$yamlValue]
         if (-not ($controlData -is [System.Collections.IDictionary])) { continue }
 
+        # Resolve controlType once per yamlValue so pending keys are scope-aware
+        $yamlControlType = ($syncHash.UIConfigs.baselineControls | Where-Object { $_.yamlValue -eq $yamlValue }).controlType
+
         $policiesToMigrate = @($controlData.Keys) | Where-Object { $migrationMap.ContainsKey($_) }
 
         foreach ($oldPolicyId in $policiesToMigrate) {
@@ -779,7 +871,7 @@ Function Invoke-PolicyMigration {
             if (-not $entry.newPolicyId) {
                 $controlData.Remove($oldPolicyId)
                 [void]$syncHash.MigrationLog.Add(
-                    "DROPPED $yamlValue [$oldPolicyId] - no replacement policy. Rationale: $($entry.migrationNote)")
+                    "$pfxDropped $yamlValue [$oldPolicyId] - no replacement policy. Rationale: $($entry.migrationNote)")
                 Write-DebugOutput -Message "Dropped removed-policy $yamlValue entry: [$oldPolicyId]" -Source $MyInvocation.MyCommand -Level "Warning"
                 continue
             }
@@ -788,11 +880,21 @@ Function Invoke-PolicyMigration {
 
             if (-not ($controlData.Keys -contains $newPolicyId)) {
                 $controlData[$newPolicyId] = $controlData[$oldPolicyId]
-                [void]$syncHash.MigrationLog.Add("MIGRATED $yamlValue [$oldPolicyId] → [$newPolicyId]")
+                if ($entry.migrationType -eq $typeDecoupled) {
+                    [void]$syncHash.MigrationLog.Add(
+                        "$pfxDecoupled $yamlValue [$oldPolicyId] → [$newPolicyId] (policy split into: $($entry.allNewPolicyIds -join ', '))")
+                } else {
+                    [void]$syncHash.MigrationLog.Add("$pfxMigrated $yamlValue [$oldPolicyId] → [$newPolicyId]")
+                }
                 Write-DebugOutput -Message "Migrated ${yamlValue}: [$oldPolicyId] → [$newPolicyId]" -Source $MyInvocation.MyCommand -Level "Info"
+                if (& $HasRenderableCard $yamlControlType '' $newPolicyId) {
+                    [void]$syncHash.MigrationPendingReview.Add("$yamlControlType|$newPolicyId")
+                } else {
+                    Write-DebugOutput -Message "Skipping MigrationPendingReview for [$newPolicyId]: no renderable $yamlControlType card" -Source $MyInvocation.MyCommand -Level "Info"
+                }
             } else {
                 [void]$syncHash.MigrationLog.Add(
-                    "SKIPPED $yamlValue [$oldPolicyId] → [$newPolicyId] (target already configured)")
+                    "$pfxSkipped $yamlValue [$oldPolicyId] → [$newPolicyId] (target already configured)")
                 Write-DebugOutput -Message "Migration skipped - ${yamlValue} target exists: [$newPolicyId]" -Source $MyInvocation.MyCommand -Level "Warning"
             }
             $controlData.Remove($oldPolicyId)

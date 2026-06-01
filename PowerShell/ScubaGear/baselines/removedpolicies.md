@@ -33,7 +33,6 @@ Additional terminology in this document specific to their respective SCBs are to
 Group owners SHALL NOT be allowed to consent to applications.
 - _Removal date:_ March 2025
 - _Removal rationale:_ Microsoft announced via MC712143 that it will no longer be possible for group owners to consent to applications. All references including the policy, implementation steps, and section have been removed as the setting is no longer present.
-- _Migrates to:_ None
 </details>
 
 <details>
@@ -43,121 +42,101 @@ Group owners SHALL NOT be allowed to consent to applications.
 The standard and strict preset security policies SHALL be enabled.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy group 1 (MS.SECURITYSUITE.1.1v1 - MS.SECURITYSUITE.1.4v1).
-- _Migrates to:_ MS.SECURITYSUITE.1.1v1
 
 #### MS.DEFENDER.1.2v1
 All users SHALL be added to Exchange Online Protection (EOP) in either the standard or strict preset security policy.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy group 1 (MS.SECURITYSUITE.1.1v1 - MS.SECURITYSUITE.1.4v1).
-- _Migrates to:_ MS.SECURITYSUITE.1.2v1
 
 #### MS.DEFENDER.1.3v1
 All users SHALL be added to Defender for Office 365 protection in either the standard or strict preset security policy.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy group 1 (MS.SECURITYSUITE.1.1v1 - MS.SECURITYSUITE.1.4v1).
-- _Migrates to:_ MS.SECURITYSUITE.1.3v1
 
 #### MS.DEFENDER.1.4v1
 Sensitive accounts SHALL be added to Exchange Online Protection in the strict preset security policy.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy group 1 (MS.SECURITYSUITE.1.1v1 - MS.SECURITYSUITE.1.4v1).
-- _Migrates to:_ MS.SECURITYSUITE.1.4v1
 
 #### MS.DEFENDER.1.5v1
 Sensitive accounts SHALL be added to Defender for Office 365 protection in the strict preset security policy.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy group 1 (MS.SECURITYSUITE.1.1v1 - MS.SECURITYSUITE.1.4v1).
-- _Migrates to:_ MS.SECURITYSUITE.1.4v1
 
 #### MS.DEFENDER.2.1v1
 User impersonation protection SHOULD be enabled for sensitive accounts in both the standard and strict preset policies.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.2.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.2.1v1
 
 #### MS.DEFENDER.2.2v1
 Domain impersonation protection SHOULD be enabled for domains owned by the agency in both the standard and strict preset policies.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.2.2v1.
-- _Migrates to:_ MS.SECURITYSUITE.2.2v1
 
 #### MS.DEFENDER.2.3v1
 Domain impersonation protection SHOULD be added for important partners in both the standard and strict preset policies.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.2.3v1.
-- _Migrates to:_ MS.SECURITYSUITE.2.3v1
 
 #### MS.DEFENDER.3.1v1
 Safe attachments SHOULD be enabled for SharePoint, OneDrive, and Microsoft Teams.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.1.4v1.
-- _Migrates to:_ MS.SECURITYSUITE.1.4v1
 
 #### MS.DEFENDER.4.1v2
 A custom policy SHALL be configured to protect PII and sensitive information, as defined by the agency, blocking at a minimum: credit card numbers, U.S. Individual Taxpayer Identification Numbers (ITIN), and U.S. Social Security numbers (SSN).
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.3.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.3.1v1
 
 #### MS.DEFENDER.4.2v1
 The custom policy SHOULD be applied to Exchange, OneDrive, SharePoint, Teams chat, and Devices.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.3.2v1.
-- _Migrates to:_ MS.SECURITYSUITE.3.2v1
 
 #### MS.DEFENDER.4.3v1
 The action for the custom policy SHOULD be set to block sharing sensitive information with everyone.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.3.3v1.
-- _Migrates to:_ MS.SECURITYSUITE.3.3v1
 
 #### MS.DEFENDER.4.4v1
 Notifications to inform users and help educate them on the proper use of sensitive information SHOULD be enabled in the custom policy.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.3.4v1.
-- _Migrates to:_ MS.SECURITYSUITE.3.4v1
 
 #### MS.DEFENDER.4.5v1
 A list of apps that are restricted from accessing files protected by DLP policy SHOULD be defined.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Removed the policy because it could not be automatically evaluated by the ScubaGear tool. It defined a best practice requiring agencies to create a list of applications restricted from accessing files protected by the DLP policy, but this is open to interpretation and varies by agency, making it difficult for the SCuBA team to enforce.
-- _Migrates to:_ None
 
 #### MS.DEFENDER.4.6v1
 The custom policy SHOULD include an action to block access to sensitive information by restricted apps and unwanted Bluetooth applications.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.3.5v1.
-- _Migrates to:_ MS.SECURITYSUITE.3.5v1
 
 #### MS.DEFENDER.5.1v1
 At a minimum, the alerts required by the CISA M365 Secure Configuration Baseline for Exchange Online SHALL be enabled.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.4.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.4.1v1
 
 #### MS.DEFENDER.5.2v1
 The alerts SHOULD be sent to a monitored address or incorporated into a Security Information and Event Management (SIEM).
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.4.2v1.
-- _Migrates to:_ MS.SECURITYSUITE.4.2v1
 
 #### MS.DEFENDER.6.1v1
 Unified Audit logging SHALL be enabled.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.5.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.5.1v1
 
 #### MS.DEFENDER.6.2v1
 Microsoft Purview Audit (Premium) logging SHALL be enabled for ALL users.
 - _Removal date:_ March 2025
 - _Removal rationale:_ MS.DEFENDER.6.2v1 was originally included in order to enable auditing of additional user actions not captured under Purview Audit (Standard). In October 2023, Microsoft announced changes to its Purview Audit service that included making audit events in Purview Audit (Premium) available to Purview Audit (Standard) subscribers. Now that the rollout of changes is completed, Purview (Standard) includes the necessary auditing that is addressed by MS.DEFENDER.6.1v1.
-- _Migrates to:_ None
 
 #### MS.DEFENDER.6.3v1
 Audit logs SHALL be maintained for at least the minimum duration dictated by OMB M-21-31.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.5.2v1.
-- _Migrates to:_ MS.SECURITYSUITE.5.2v1
 
 </details>
 
@@ -168,151 +147,121 @@ Audit logs SHALL be maintained for at least the minimum duration dictated by OMB
 A list of approved IP addresses for sending mail SHALL be maintained.
 - _Removal date:_ May 2024
 - _Removal rationale:_ MS.EXO.2.1v1 is not a security configuration that can be audited and acts as a step in implementation of policy MS.EXO.2.2. Having the list of approved IPs will be added as a part of implementation of policy MS.EXO.2.2 and removed as a policy in the baseline.
-- _Migrates to:_ None
-
-#### MS.EXO.2.2v2
-SPF SHOULD be enabled for all agency domains.
-- _Removal date:_ April 2026
-- _Removal rationale:_ Policy superseded by version 3 with revised requirements.
-- _Migrates to:_ MS.EXO.2.2v3
 
 #### MS.EXO.8.1v2
 A DLP solution SHALL be used.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.3.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.3.1v1
 
 #### MS.EXO.8.2v2
 The DLP solution SHALL protect personally identifiable information (PII) and sensitive information, as defined by the agency.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.3.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.3.1v1
 
 #### MS.EXO.8.3v1
 The selected DLP solution SHOULD offer services comparable to the native DLP solution offered by Microsoft.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Removed "offer services comparable solution offered by Microsoft" policies in Security Suite Baseline consolidation efforts. 
-- _Migrates to:_ None
 
 #### MS.EXO.8.4v1
 At a minimum, the DLP solution SHALL restrict sharing credit card numbers, U.S. Individual Taxpayer Identification Numbers (ITIN), and U.S. Social Security numbers (SSN) via email.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.3.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.3.1v1
 
 #### MS.EXO.9.1v2
 Emails SHALL be filtered by attachment file types.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.1.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.1.1v1
 
 #### MS.EXO.9.2v1
 The attachment filter SHOULD attempt to determine the true file type and assess the file extension.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Removed the policy because it could not be configured via Microsoft Defender and assessed by ScubaGear.
-- _Migrates to:_ None
 
 #### MS.EXO.9.3v1
 Disallowed file types SHALL be determined and enforced.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.1.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.1.1v1
 
 #### MS.EXO.9.4v1
 If a third-party filtering solution is used, it SHOULD offer services comparable to Microsoft Defender's Common Attachment Filter.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Removed "offer services comparable solution offered by Microsoft" policies in Security Suite Baseline consolidation efforts. 
-- _Migrates to:_ None
 
 #### MS.EXO.9.5v1
 At a minimum, click-to-run files SHOULD be blocked (e.g., .exe, .cmd, and .vbe).
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.1.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.1.1v1
 
 #### MS.EXO.10.1v1
 Emails SHALL be scanned for malware.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.1.3v1.
-- _Migrates to:_ MS.SECURITYSUITE.1.3v1
 
 #### MS.EXO.10.2v1
 Emails identified as containing malware SHALL be quarantined or dropped.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.1.3v1.
-- _Migrates to:_ MS.SECURITYSUITE.1.3v1
 
 #### MS.EXO.10.3v1
 Email scanning SHALL be capable of reviewing emails after delivery.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.1.2v1.
-- _Migrates to:_ MS.SECURITYSUITE.1.2v1
 
 #### MS.EXO.11.1v1
 Impersonation protection checks SHOULD be used.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.2.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.2.1v1
 
 #### MS.EXO.11.2v1
 User warnings, comparable to the user safety tips included with EOP, SHOULD be displayed.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.2.4v1.
-- _Migrates to:_ MS.SECURITYSUITE.2.4v1
 
 #### MS.EXO.11.3v1
 The phishing protection solution SHOULD include an AI-based phishing detection tool comparable to EOP Mailbox Intelligence.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Removed "offer services comparable solution offered by Microsoft" policies in Security Suite Baseline consolidation efforts.
-- _Migrates to:_ None
 
 #### MS.EXO.12.1v1
 IP allow lists SHOULD NOT be created.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.8.1v1
-- _Migrates to:_ MS.SECURITYSUITE.8.1v1
 
 #### MS.EXO.12.2v1
 Safe lists SHOULD NOT be enabled.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.8.2v1
-- _Migrates to:_ MS.SECURITYSUITE.8.2v1
 
 #### MS.EXO.14.1v2
 A spam filter SHALL be enabled.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.6.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.6.1v1
 
 #### MS.EXO.14.2v1
 Spam and high confidence spam SHALL be moved to either the junk email folder or the quarantine folder.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.6.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.6.1v1
 
 #### MS.EXO.14.3v2
 Allowed domains SHALL NOT be added to inbound anti-spam protection policies.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.6.2v1.
-- _Migrates to:_ MS.SECURITYSUITE.6.2v1
 
 #### MS.EXO.15.1v1
 URL comparison with a block-list SHOULD be enabled.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.7.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.7.1v1
 
 #### MS.EXO.15.2v1
 Direct download links SHOULD be scanned for malware.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.7.2v1.
-- _Migrates to:_ MS.SECURITYSUITE.7.2v1
 
 #### MS.EXO.15.3v1
 User click tracking SHOULD be enabled.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.7.3v1.
-- _Migrates to:_ MS.SECURITYSUITE.7.3v1
 
 #### MS.EXO.16.1v1
 At a minimum, the following alerts SHALL be enabled:
@@ -332,31 +281,26 @@ At a minimum, the following alerts SHALL be enabled:
   g. **A potentially malicious URL click was detected.**
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.4.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.4.1v1
 
 #### MS.EXO.16.2v1
 The alerts SHOULD be sent to a monitored address or incorporated into a security information and event management (SIEM) system.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.4.2v1.
-- _Migrates to:_ MS.SECURITYSUITE.4.2v1
 
 #### MS.EXO.17.1v1
 Unified Audit logging SHALL be enabled.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.5.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.5.1v1
 
 #### MS.EXO.17.2v1
 Microsoft Purview Audit (Premium) logging SHALL be enabled for ALL users.
 - _Removal date:_ March 2025
 - _Removal rationale:_ MS.EXO.17.2v1 was originally included in order to enable auditing of additional user actions not captured under Purview Audit (Standard). In October 2023, Microsoft announced changes to its Purview Audit service that included making audit events in Purview Audit (Premium) available to Purview Audit (Standard) subscribers. Now that the rollout of changes has been completed, Purview (Standard) includes the necessary auditing which is addressed by MS.EXO.17.2v1
-- _Migrates to:_ None
 
 #### MS.EXO.17.3v1
 Audit logs SHALL be maintained for at least the minimum duration dictated by OMB M-21-31 (Appendix C).
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.5.2v1.
-- _Migrates to:_ MS.SECURITYSUITE.5.2v1
 
 </details>
 
@@ -389,19 +333,16 @@ N/A
 Guest access SHALL be limited to the email the invitation was sent to.
 - _Removal date:_ February 2025
 - _Removal rationale:_ The option to limit guest access to the email the invitation was sent to found in policy MS.SHAREPOINT.1.4v1 has been deprecated by Microsoft. All references, including the policy and its implementation steps, have been removed since the setting is no longer present.
-- _Migrates to:_ None
 
 #### MS.SHAREPOINT.4.1v1
 Users SHALL be prevented from running custom scripts on personal sites (aka OneDrive).
 - _Removal date:_ July 2024
 - _Removal rationale:_ The option to enable and disable custom scripting on personal sites (aka OneDrive) found in policy MS.SHAREPOINT.4.1v1 has been deprecated by Microsoft. All references including the policy and its implementation steps have been removed as the setting is no longer present.  Furthermore, it is no longer possible to allow custom scripts on personal sites.
-- _Migrates to:_ None
 
 #### MS.SHAREPOINT.4.2v1
 Users SHALL be prevented from running custom scripts on self-service created sites.
 - _Removal date:_ November 2024
 - _Removal rationale:_ Microsoft has noted that after November 2024 it will no longer be possible to prevent SharePoint in resetting custom script settings to its original value (disabled) for all sites. All references including the policy, implementation steps, and section, by direction of CISA and Microsoft, have been removed as the setting will be automatically reverted back to **Blocked** within 24 hours.
-- _Migrates to:_ None
 
 </details>
 
@@ -414,43 +355,36 @@ Users SHALL be prevented from running custom scripts on self-service created sit
 Contact with Skype users SHALL be blocked.
 - _Removal date:_ August 2025
 - _Removal rationale:_ The option to restrict contact with Skype users found in policy MS.TEAMS.3.1v1 has been deprecated by Microsoft. All references, including the policy and its implementation steps, have been removed since the setting is no longer present.
-- _Migrates to:_ None
 
 #### MS.TEAMS.6.1v1
 A DLP solution SHALL be enabled and SHOULD offer services comparable to the native DLP solution offered by Microsoft.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.3.2v1.
-- _Migrates to:_ MS.SECURITYSUITE.3.2v1
 
 #### MS.TEAMS.6.2v1
 The DLP solution SHALL protect personally identifiable information (PII) and sensitive information, as defined by the agency. At a minimum, sharing credit card numbers, taxpayer identification numbers (TINs), and Social Security numbers (SSNs) via email SHALL be restricted.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.3.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.3.1v1
 
 #### MS.TEAMS.7.1v1
 Attachments included with Teams messages SHOULD be scanned for malware.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.1.4v1.
-- _Migrates to:_ MS.SECURITYSUITE.1.4v1
 
 #### MS.TEAMS.7.2v1
 Users SHOULD be prevented from opening or downloading files detected as malware.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.1.4v1.
-- _Migrates to:_ MS.SECURITYSUITE.1.4v1
 
 #### MS.TEAMS.8.1v1
 Attachments included with Teams messages SHOULD be scanned for malware.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.7.1v1.
-- _Migrates to:_ MS.SECURITYSUITE.7.1v1
 
 #### MS.TEAMS.8.2v1
 Users SHOULD be prevented from opening or downloading files detected as malware.
 - _Removal date:_ April 2026
 - _Removal rationale:_ Reworked into the new security suite baseline policy MS.SECURITYSUITE.7.3v1.
-- _Migrates to:_ MS.SECURITYSUITE.7.3v1
 
 </details>
 

@@ -1,4 +1,4 @@
-Function Initialize-ProductSubTabs {
+﻿Function Initialize-ProductSubTabs {
     <#
     .SYNOPSIS
     Dynamically creates product sub-tabs for Exclusions, Annotations, and Omissions tab controls.
@@ -65,4 +65,57 @@ Function Initialize-ProductSubTabs {
     # Update the Exclusions info text block
     $ExclusionSupport = $syncHash.UIConfigs.products | Where-Object { $_.supportsExclusions -eq $true } | Select-Object -ExpandProperty id
     $syncHash.ExclusionsInfo_TextBlock.Text = ($syncHash.UIConfigs.localeContext.ExclusionsInfo_TextBlock -f ($ExclusionSupport -join ', ').ToUpper())
+}
+
+Function Update-MigrationPendingTabIndicators {
+    <#
+    .SYNOPSIS
+    Adds or removes a red asterisk on product sub-tabs that contain unreviewed migration-pending policies.
+    .DESCRIPTION
+    Iterates every product/controlType sub-tab registered in syncHash. For each one it checks whether
+    any policy in $syncHash.MigrationPendingReview belongs to that product (by scanning the baseline
+    list). It then sets the tab Header to either "PRODUCT *" (pending) or "PRODUCT" (clear).
+    Call this after import and after each Save or Dismiss action.
+    #>
+    if (-not $syncHash.MigrationPendingReview) { return }
+
+    foreach ($control in $syncHash.UIConfigs.baselineControls) {
+        foreach ($product in $syncHash.UIConfigs.products) {
+            $tabName = "$($product.id)$($control.controlType)Tab"
+            $tabItem = $syncHash[$tabName]
+            if (-not $tabItem) { continue }
+
+            # Check if any pending policy belongs to this product AND this specific controlType
+            $hasPending = $false
+            foreach ($pendingKey in $syncHash.MigrationPendingReview) {
+                # Keys are stored as "{controlType}|{policyId}"
+                $parts = $pendingKey -split '\|', 2
+                if ($parts.Count -ne 2) { continue }
+                $pendingControlType = $parts[0]
+                $pendingPolicyId    = $parts[1]
+                if ($pendingControlType -ne $control.controlType) { continue }
+                $baseline = $syncHash.Baselines.($product.id) | Where-Object { $_.id -eq $pendingPolicyId }
+                if ($baseline) { $hasPending = $true; break }
+            }
+
+            $tabItem.Header = if ($hasPending) {
+                # Use a StackPanel header with a red asterisk TextBlock
+                $sp = New-Object System.Windows.Controls.StackPanel
+                $sp.Orientation = "Horizontal"
+                $label = New-Object System.Windows.Controls.TextBlock
+                $label.Text = $product.id.ToUpper()
+                $label.VerticalAlignment = "Center"
+                $star = New-Object System.Windows.Controls.TextBlock
+                $star.Text = " *"
+                $star.Foreground = [System.Windows.Media.Brushes]::Red
+                $star.FontWeight = "Bold"
+                $star.VerticalAlignment = "Center"
+                [void]$sp.Children.Add($label)
+                [void]$sp.Children.Add($star)
+                $sp
+            } else {
+                $product.id.ToUpper()
+            }
+        }
+    }
 }

@@ -924,17 +924,26 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="CheckBox">
                         <Grid Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <!-- Green Dot -->
+                            <!-- Green Dot: shown when data is saved and all IDs resolved -->
                             <Ellipse x:Name="SavedDot"
                                     Width="16" Height="16"
                                     Fill="#28A745"
                                     Visibility="Collapsed"/>
+                            <!-- Red Dot: shown when one or more IDs could not be resolved in the directory -->
+                            <Ellipse x:Name="OrphanDot"
+                                    Width="16" Height="16"
+                                    Fill="#DC3545"
+                                    Visibility="Collapsed"/>
                         </Grid>
 
                         <ControlTemplate.Triggers>
-                            <!-- Show dot only when Tag == Saved -->
+                            <!-- Show green dot when Tag == Saved -->
                             <Trigger Property="Tag" Value="Saved">
                                 <Setter TargetName="SavedDot" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <!-- Show red dot when Tag == HasOrphans: IDs imported but not found in directory -->
+                            <Trigger Property="Tag" Value="HasOrphans">
+                                <Setter TargetName="OrphanDot" Property="Visibility" Value="Visible"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

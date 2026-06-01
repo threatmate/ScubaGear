@@ -14,7 +14,6 @@
                 'ScubaConfigAppScubaRunHelper.psm1',
                 'ScubaConfigAppDynamicCardHelper.psm1',
                 'ScubaConfigAppResetHelper.psm1',
-                'ScubaConfigAppBaselineHelper.psm1',
                 'ScubaConfigAppGlobalSettingsHelper.psm1',
                 'ScubaConfigAppGraphHelper.psm1',
                 'ScubaConfigAppImportHelper.psm1',
@@ -163,12 +162,6 @@
                     'Restore-AutoSaveSettings',
                     'Clear-AutoSaveData'
                 )
-                'ScubaConfigAppBaselineHelper.psm1' = @(
-                    'Get-ScubaConfigExclusionMappingsFromMarkdown',
-                    'Update-ScubaConfigBaselineWithMarkdown',
-                    'Get-ScubaBaselinePolicy',
-                    'Get-ScubaPolicyContent'
-                )
                 'ScubaConfigAppChangeLogHelper.psm1' = @(
                     'Show-ChangelogWindow'
                 )
@@ -208,7 +201,6 @@
                     'Show-YamlImportProgress',
                     'Invoke-YamlImportWithProgress',
                     'Import-YamlToDataStructures',
-                    'ConvertTo-MigrationEntry',
                     'Get-PolicyMigrationMap',
                     'Invoke-PolicyMigration'
                 )
@@ -397,58 +389,11 @@
             Import-Module (Join-Path $helpersPath 'ScubaConfigAppDebugHelper.psm1')  -Force
             Import-Module (Join-Path $helpersPath 'ScubaConfigAppImportHelper.psm1') -Force
 
-            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', 'testProductCodeMap')]
-            $testProductCodeMap = @{
-                'DEFENDER'      = 'Defender'
-                'EXO'           = 'Exo'
-                'AAD'           = 'Aad'
-                'SHAREPOINT'    = 'Sharepoint'
-                'TEAMS'         = 'Teams'
-                'SECURITYSUITE' = 'SecuritySuite'
-            }
         }
 
         AfterAll {
             Remove-Module ScubaConfigAppImportHelper -Force -ErrorAction SilentlyContinue
             Remove-Module ScubaConfigAppDebugHelper  -Force -ErrorAction SilentlyContinue
-        }
-
-        Context 'ConvertTo-MigrationEntry' {
-            It 'Should return correct new policy ID from _Migrates to:_ field' {
-                $lines = @(
-                    '- _Removal rationale:_ Consolidated into SecuritySuite.',
-                    '- _Migrates to:_ MS.SECURITYSUITE.1.1v1'
-                )
-                $result = ConvertTo-MigrationEntry -PolicyId 'MS.DEFENDER.1.1v1' -Lines $lines -ProductCodeMap $testProductCodeMap
-                $result.oldPolicyId | Should -Be 'MS.DEFENDER.1.1v1'
-                $result.oldProduct  | Should -Be 'Defender'
-                $result.newPolicyId | Should -Be 'MS.SECURITYSUITE.1.1v1'
-                $result.newProduct  | Should -Be 'SecuritySuite'
-            }
-
-            It 'Should return null newPolicyId when _Migrates to:_ is None' {
-                $lines = @(
-                    '- _Removal rationale:_ Policy removed without a SecuritySuite equivalent.',
-                    '- _Migrates to:_ None'
-                )
-                $result = ConvertTo-MigrationEntry -PolicyId 'MS.AAD.5.4v1' -Lines $lines -ProductCodeMap $testProductCodeMap
-                $result.newPolicyId | Should -BeNullOrEmpty
-                $result.newProduct  | Should -BeNullOrEmpty
-            }
-
-            It 'Should fall back to rationale parsing when _Migrates to:_ field is absent' {
-                $lines = @(
-                    '- _Removal rationale:_ Consolidated into MS.SECURITYSUITE.2.1v1.'
-                )
-                $result = ConvertTo-MigrationEntry -PolicyId 'MS.DEFENDER.2.1v1' -Lines $lines -ProductCodeMap $testProductCodeMap
-                $result.newPolicyId | Should -Be 'MS.SECURITYSUITE.2.1v1'
-            }
-
-            It 'Should derive the correct old product from the policy ID segment' {
-                $lines = @('- _Migrates to:_ None')
-                $result = ConvertTo-MigrationEntry -PolicyId 'MS.TEAMS.6.1v1' -Lines $lines -ProductCodeMap $testProductCodeMap
-                $result.oldProduct | Should -Be 'Teams'
-            }
         }
 
         Context 'Invoke-PolicyMigration - product exclusion blocks (Pass 1)' {
@@ -463,6 +408,23 @@
                                 [PSCustomObject]@{ supportsAllProducts = $true; yamlValue = 'OmitPolicy' }
                                 [PSCustomObject]@{ supportsAllProducts = $true; yamlValue = 'AnnotatePolicy' }
                             )
+                            policyMigration = @{
+                                cacheFileName            = 'ScubaConfigApp_PolicyMigrationMap.json'
+                                csvColumns               = [PSCustomObject]@{ oldId = 'Old ID'; newId = 'New ID'; rationale = 'Removal Rationale' }
+                                migrationTypes           = [PSCustomObject]@{ removed = 'Removed'; decoupled = 'Decoupled'; direct = 'Direct'; versionBump = 'VersionBump' }
+                                reportMaxLinesPerSection = 15
+                                localeReportWindow       = [PSCustomObject]@{
+                                    title    = 'Legacy Policy Migration Applied'
+                                    intro    = 'This configuration file contained {0} legacy policy setting(s).'
+                                    outro    = 'Please review the updated settings before saving.'
+                                    sections = [PSCustomObject]@{
+                                        migrated  = [PSCustomObject]@{ prefix = 'MIGRATED';  heading = 'AUTO-MIGRATED ({0}):' }
+                                        decoupled = [PSCustomObject]@{ prefix = 'DECOUPLED'; heading = 'NEEDS REVIEW - POLICY SPLIT ({0}):'; body = 'These policies were decoupled into multiple new policies.' }
+                                        dropped   = [PSCustomObject]@{ prefix = 'DROPPED';   heading = 'REMOVED - NO REPLACEMENT ({0}):' }
+                                        skipped   = [PSCustomObject]@{ prefix = 'SKIPPED' }
+                                    }
+                                }
+                            }
                         }
                     })
                 }
@@ -567,6 +529,23 @@
                                 [PSCustomObject]@{ supportsAllProducts = $true; yamlValue = 'OmitPolicy' }
                                 [PSCustomObject]@{ supportsAllProducts = $true; yamlValue = 'AnnotatePolicy' }
                             )
+                            policyMigration = @{
+                                cacheFileName            = 'ScubaConfigApp_PolicyMigrationMap.json'
+                                csvColumns               = [PSCustomObject]@{ oldId = 'Old ID'; newId = 'New ID'; rationale = 'Removal Rationale' }
+                                migrationTypes           = [PSCustomObject]@{ removed = 'Removed'; decoupled = 'Decoupled'; direct = 'Direct'; versionBump = 'VersionBump' }
+                                reportMaxLinesPerSection = 15
+                                localeReportWindow       = [PSCustomObject]@{
+                                    title    = 'Legacy Policy Migration Applied'
+                                    intro    = 'This configuration file contained {0} legacy policy setting(s).'
+                                    outro    = 'Please review the updated settings before saving.'
+                                    sections = [PSCustomObject]@{
+                                        migrated  = [PSCustomObject]@{ prefix = 'MIGRATED';  heading = 'AUTO-MIGRATED ({0}):' }
+                                        decoupled = [PSCustomObject]@{ prefix = 'DECOUPLED'; heading = 'NEEDS REVIEW - POLICY SPLIT ({0}):'; body = 'These policies were decoupled into multiple new policies.' }
+                                        dropped   = [PSCustomObject]@{ prefix = 'DROPPED';   heading = 'REMOVED - NO REPLACEMENT ({0}):' }
+                                        skipped   = [PSCustomObject]@{ prefix = 'SKIPPED' }
+                                    }
+                                }
+                            }
                         }
                     })
                 }
@@ -627,10 +606,28 @@
                     param($cfg)
                     $script:syncHash = [hashtable]::Synchronized(@{
                         UIConfigPath = $cfg
-                        UIConfigs    = @{ OfflineBaselineMarkdownPath = '..\..\baselines' }
+                        UIConfigs    = @{
+                            OfflineBaselineMarkdownPath = '..\..\baselines'
+                            PolicyMigrationsCSVPath     = '..\..\mappings\scuba-baseline-policy-migrations.csv'
+                            policyMigration             = @{
+                                cacheFileName  = 'ScubaConfigApp_PolicyMigrationMap.json'
+                                csvColumns     = [PSCustomObject]@{ oldId = 'Old ID'; newId = 'New ID'; rationale = 'Removal Rationale' }
+                                migrationTypes = [PSCustomObject]@{ removed = 'Removed'; decoupled = 'Decoupled'; direct = 'Direct'; versionBump = 'VersionBump' }
+                                reportMaxLinesPerSection = 15
+                            }
+                            products = @(
+                                [PSCustomObject]@{ id = 'Aad' }
+                                [PSCustomObject]@{ id = 'SecuritySuite' }
+                                [PSCustomObject]@{ id = 'Exo' }
+                                [PSCustomObject]@{ id = 'PowerBI' }
+                                [PSCustomObject]@{ id = 'PowerPlatform' }
+                                [PSCustomObject]@{ id = 'Sharepoint' }
+                                [PSCustomObject]@{ id = 'Teams' }
+                            )
+                        }
                     })
                 }
-                # Remove any cache so each test parses removedpolicies.md fresh
+                # Remove any cache so each test reads the CSV fresh
                 $cacheFile = Join-Path $env:TEMP 'ScubaConfigApp_PolicyMigrationMap.json'
                 if (Test-Path $cacheFile) { Remove-Item $cacheFile -Force }
             }
