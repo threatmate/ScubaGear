@@ -1,4 +1,6 @@
 
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "ScubaLogging.psm1")
+
 function Set-Utf8NoBom {
     <#
     .Description

@@ -1833,7 +1833,6 @@ function Get-ServicePrincipalParams {
     }
     $ServicePrincipalParams
 }
-
 function Import-Resources {
     <#
     .Description
@@ -1845,10 +1844,14 @@ function Import-Resources {
     [CmdletBinding()]
     param()
     try {
+        # Import logging first and make exported functions visible outside Orchestrator module scope
+        $ScubaLoggingPath = Join-Path -Path $PSScriptRoot -ChildPath 'Utility\ScubaLogging.psm1' -ErrorAction 'Stop'
+        Import-Module -Name $ScubaLoggingPath -Global
+
         $ProvidersPath = Join-Path -Path $PSScriptRoot `
-        -ChildPath "Providers" `
-        -Resolve `
-        -ErrorAction 'Stop'
+            -ChildPath "Providers" `
+            -Resolve `
+            -ErrorAction 'Stop'
         $ProviderResources = Get-ChildItem $ProvidersPath -Recurse | Where-Object { $_.Name -like 'Export*.psm1' }
         if (!$ProviderResources)
         {
@@ -1866,10 +1869,6 @@ function Import-Resources {
             Write-Debug "Importing $_ module"
             Import-Module -Name $ModulePath
         }
-
-        # Import ScubaLogging explicitly (not part of Utility folder import)
-        $ScubaLoggingPath = Join-Path -Path $PSScriptRoot -ChildPath 'Utility\ScubaLogging.psm1' -ErrorAction 'Stop'
-        Import-Module -Name $ScubaLoggingPath -Force
     }
     catch {
         Write-ScubaLog -Message "Fatal error importing PowerShell modules" -Level "Error" -Source "ImportResources" -Data @{
