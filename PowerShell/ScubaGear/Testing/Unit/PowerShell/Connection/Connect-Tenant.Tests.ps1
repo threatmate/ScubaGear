@@ -17,6 +17,10 @@ InModuleScope Connection {
             Mock Connect-MicrosoftTeams -MockWith {}
             function Connect-EXOHelper {throw 'this will be mocked'}
             Mock -ModuleName Connection Connect-EXOHelper -MockWith {}
+            function Get-ExchangeOnlineScope {throw 'this will be mocked'}
+            Mock -ModuleName Connection Get-ExchangeOnlineScope -MockWith { return "https://outlook.office365.com/.default" }
+            function Get-ExchangeOnlineApiEndpoint {throw 'this will be mocked'}
+            Mock -ModuleName Connection Get-ExchangeOnlineApiEndpoint -MockWith { return "https://outlook.office365.com/adminapi/beta" }
             function Invoke-GraphDirectly {throw 'this will be mocked'}
             Mock Invoke-GraphDirectly -MockWith {
                 return [pscustomobject]@{
@@ -38,7 +42,7 @@ InModuleScope Connection {
         }
         Context 'With Endpoint:  <Endpoint>; ProductNames: <ProductNames>' -ForEach @(
             @{ProductNames = "aad"; Services = @('Connect-GraphHelper')}
-            @{ProductNames = "securitysuite"; Services = @('Connect-EXOHelper')}
+            @{ProductNames = "securitysuite"; Services = @('Connect-GraphHelper')}
             @{ProductNames = "exo"; Services = @('Connect-EXOHelper')}
             @{ProductNames = "powerplatform"; Services = @('Connect-GraphHelper')}
             @{ProductNames = "sharepoint"; Services = @('Connect-GraphHelper')}  # SharePoint uses REST API, only needs Graph for tenant info
