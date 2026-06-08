@@ -246,6 +246,7 @@ Function Invoke-YamlImportWithProgress {
         # Pre-process: extract GUID display names from inline YAML comments (e.g. "- guid #DisplayName")
         # ConvertFrom-Yaml strips comments, so we harvest them from raw text before parsing.
         if ($syncHash.IdDisplayNameCache) { $syncHash.IdDisplayNameCache.Clear() }
+        if ($syncHash.OrphanedIds) { $syncHash.OrphanedIds.Clear() }
         foreach ($line in ($yamlContent -split "`r?`n")) {
             if ($line -match '^\s*-\s+([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\s+#(.+)$') {
                 $syncHash.IdDisplayNameCache[$matches[1]] = $matches[2].Trim()
@@ -312,7 +313,6 @@ Function Invoke-YamlImportWithProgress {
                     }
 
                     # Track IDs that Graph did not return - object may have been deleted.
-                    if ($syncHash.OrphanedIds) { $syncHash.OrphanedIds.Clear() }
                     $notFound = @($uniqueUncachedIds | Where-Object { -not $resolvedNames.ContainsKey($_) })
                     foreach ($id in $notFound) { $syncHash.OrphanedIds[$id] = $true }
 

@@ -8,7 +8,7 @@
   "EnableResultReader": true,
   "MinimumProductsRequired": 1,
   "MaximumResults": 10,
-  "PullOnlineBaselines": true,
+  "PullOnlineBaselines": false,
   "EnablePolicyViewer": true,
   "OnlineBaselineSchemaURL": "https://raw.githubusercontent.com/cisagov/ScubaGear/main/PowerShell/ScubaGear/schemas/ScubaBaselines.json",
   "LocalBaselineSchemaPath": "..\\..\\schemas\\ScubaBaselines.json",
