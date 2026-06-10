@@ -103,11 +103,14 @@ BeforeDiscovery {
     $ScubaModule = Join-Path -Path $ScubaModulePath -ChildPath "../ScubaGear.psd1"
     Import-Module $ScubaModule
 
+    # Convert product name to execution name (defender -> securitysuite mapping)
+    $ExecutionProductName = if ($ProductName -eq "defender") { "securitysuite" } else { $ProductName }
+
     if ($Variant) {
-        $TestPlanFileName = "TestPlans/$ProductName.$Variant.testplan.yaml"
+        $TestPlanFileName = "TestPlans/$ExecutionProductName.$Variant.testplan.yaml"
     }
     else {
-        $TestPlanFileName = "TestPlans/$ProductName.testplan.yaml"
+        $TestPlanFileName = "TestPlans/$ExecutionProductName.testplan.yaml"
     }
     $TestPlanPath = Join-Path -Path $PSScriptRoot -ChildPath $TestPlanFileName
     Test-Path -Path $TestPlanPath -PathType Leaf
