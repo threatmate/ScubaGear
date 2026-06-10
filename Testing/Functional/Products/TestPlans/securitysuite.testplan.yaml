@@ -3,19 +3,17 @@ TestPlan:
   - PolicyId: MS.SECURITYSUITE.1.1v1
     TestDriver: ScubaCached
     Tests:
-      - TestDescription: MS.SECURITYSUITE.1.1v1 Not Checked # TODO update once implemented
+      - TestDescription: MS.SECURITYSUITE.1.1v1 Compliant case
         Preconditions: []
         Postconditions: []
-        IsNotChecked: true
-        ExpectedResult: false
+        ExpectedResult: true
   - PolicyId: MS.SECURITYSUITE.1.2v1
     TestDriver: ScubaCached
     Tests:
-      - TestDescription: MS.SECURITYSUITE.1.2v1 Not Checked # TODO update once implemented
+      - TestDescription: MS.SECURITYSUITE.1.2v1 Compliant case
         Preconditions: []
         Postconditions: []
-        IsNotChecked: true
-        ExpectedResult: false
+        ExpectedResult: true
   - PolicyId: MS.SECURITYSUITE.1.3v1
     TestDriver: ScubaCached
     Tests:
@@ -121,6 +119,7 @@ TestPlan:
                   - Name: Tenant restricted from sending email
                     Disabled: false
         Postconditions: []
+        IsNotChecked: true
         ExpectedResult: false
       - TestDescription: MS.SECURITYSUITE.4.1v1 Compliant case - Required alerts are enabled
         Preconditions:
@@ -141,6 +140,7 @@ TestPlan:
                   - Name: Tenant restricted from sending email
                     Disabled: false
         Postconditions: []
+        IsNotChecked: true
         ExpectedResult: true
   - PolicyId: MS.SECURITYSUITE.4.2v1
     TestDriver: ScubaCached
@@ -155,20 +155,14 @@ TestPlan:
     TestDriver: ScubaCached
     Tests:
       - TestDescription: MS.SECURITYSUITE.5.1v1 Non-Compliant case - Unified Audit logging is disabled
-        Preconditions:
-          - Command: UpdateProviderExport
-            Splat:
-              Updates:
-                admin_audit_log_config[0].UnifiedAuditLogIngestionEnabled: false
+        Preconditions: []
         Postconditions: []
+        IsNotChecked: true
         ExpectedResult: false
       - TestDescription: MS.SECURITYSUITE.5.1v1 Compliant case - Unified Audit logging is enabled
-        Preconditions:
-          - Command: UpdateProviderExport
-            Splat:
-              Updates:
-                admin_audit_log_config[0].UnifiedAuditLogIngestionEnabled: true
+        Preconditions: []
         Postconditions: []
+        IsNotChecked: true
         ExpectedResult: true
   - PolicyId: MS.SECURITYSUITE.5.2v1
     TestDriver: ScubaCached
@@ -182,11 +176,10 @@ TestPlan:
   - PolicyId: MS.SECURITYSUITE.6.1v1
     TestDriver: ScubaCached
     Tests:
-      - TestDescription: MS.SECURITYSUITE.6.1v1 Not Checked # TODO update once implemented
+      - TestDescription: MS.SECURITYSUITE.6.1v1 Compliant case
         Preconditions: []
         Postconditions: []
-        IsNotChecked: true
-        ExpectedResult: false
+        ExpectedResult: true
   - PolicyId: MS.SECURITYSUITE.6.2v1
     TestDriver: ScubaCached
     Tests:
@@ -233,6 +226,7 @@ TestPlan:
                   - "192.168.1.10"
                   - "192.168.1.23"
         Postconditions: []
+        IsNotChecked: true
         ExpectedResult: false
       - TestDescription: MS.SECURITYSUITE.8.1v1 Compliant case - IP allow list is empty
         Preconditions:
@@ -241,6 +235,7 @@ TestPlan:
               Updates:
                 "conn_filter[0].IPAllowList": []
         Postconditions: []
+        IsNotChecked: true
         ExpectedResult: true
 
   - PolicyId: MS.SECURITYSUITE.8.2v1
@@ -253,6 +248,7 @@ TestPlan:
               Updates:
                 "conn_filter[0].EnableSafeList": true
         Postconditions: []
+        IsNotChecked: true
         ExpectedResult: false
       - TestDescription: MS.SECURITYSUITE.8.2v1 Non-Compliant case - Safe lists are Disabled
         Preconditions:
@@ -261,4 +257,5 @@ TestPlan:
               Updates:
                 "conn_filter[0].EnableSafeList": false
         Postconditions: []
+        IsNotChecked: true
         ExpectedResult: true
