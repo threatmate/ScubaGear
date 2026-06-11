@@ -47,13 +47,13 @@ function Export-PowerBIProvider {
 
         if ($AdminSettings.Count -gt 0) {
             $TenantSettings = $AdminSettings[0].tenantSettings
+            $TenantSettingsJson = ConvertTo-Json @($TenantSettings) -Depth 10
         }
     }
     else {
         $Tracker.AddSuccessfulCommand("Invoke-RestMethod")
     }
-
-    $TenantSettingsJson = ConvertTo-Json @($TenantSettings) -Depth 10
+    
     $LicenseFoundJson = ConvertTo-Json $LicenseFound
     $PowerBISuccessfulCommands = ConvertTo-Json @($Tracker.GetSuccessfulCommands())
     $PowerBIUnSuccessfulCommands = ConvertTo-Json @($Tracker.GetUnSuccessfulCommands())

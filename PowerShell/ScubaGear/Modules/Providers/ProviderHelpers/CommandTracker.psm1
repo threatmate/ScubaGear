@@ -61,7 +61,8 @@ class CommandTracker {
                 Write-Warning "Error running $($Command): $($_.Exception.Message)`n$($_.ScriptStackTrace)"
             }
 
-            Write-ScubaLog -Message "Error running command" -Level "Warning" -Source "ProviderList" -Data @{
+            # We set the log level to Info here because Write-ScubaLog will track Warning or Error as a terminating error.
+            Write-ScubaLog -Message "Error running command" -Level "Info" -Source "TryCommand" -Data @{
                 Command = $Command
                 Error   = $_.Exception.Message
                 StackTrace = $_.ScriptStackTrace
