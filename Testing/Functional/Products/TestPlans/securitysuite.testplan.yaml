@@ -3,17 +3,19 @@ TestPlan:
   - PolicyId: MS.SECURITYSUITE.1.1v1
     TestDriver: ScubaCached
     Tests:
-      - TestDescription: MS.SECURITYSUITE.1.1v1 Compliant case
+      - TestDescription: MS.SECURITYSUITE.1.1v1 Not Checked # preset policy compliance varies by tenant
         Preconditions: []
         Postconditions: []
-        ExpectedResult: true
+        IsNotChecked: true
+        ExpectedResult: false
   - PolicyId: MS.SECURITYSUITE.1.2v1
     TestDriver: ScubaCached
     Tests:
-      - TestDescription: MS.SECURITYSUITE.1.2v1 Compliant case
+      - TestDescription: MS.SECURITYSUITE.1.2v1 Not Checked # preset policy compliance varies by tenant
         Preconditions: []
         Postconditions: []
-        ExpectedResult: true
+        IsNotChecked: true
+        ExpectedResult: false
   - PolicyId: MS.SECURITYSUITE.1.3v1
     TestDriver: ScubaCached
     Tests:
