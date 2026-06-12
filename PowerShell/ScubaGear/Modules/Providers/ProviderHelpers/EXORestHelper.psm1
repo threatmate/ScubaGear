@@ -1,6 +1,14 @@
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath "../../Utility/Utility.psm1") -Function Invoke-ScubaRestMethod
 
 function Get-ExchangeOnlineScope {
+    <#
+    .SYNOPSIS
+        Returns the OAuth2 scope for Exchange Online based on M365 environment.
+    .PARAMETER M365Environment
+        The M365 environment (commercial, gcc, gcchigh, dod).
+    .FUNCTIONALITY
+        Internal
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -17,6 +25,25 @@ function Get-ExchangeOnlineScope {
 }
 
 function Get-ExchangeOnlineApiEndpoint {
+    <#
+    .SYNOPSIS
+        Dynamically resolves the Exchange Online Admin API endpoint URI.
+    .DESCRIPTION
+        Calls the Exchange Online front-door endpoint to determine the actual backend
+        API endpoint. Some tenants get redirected to a tenant-specific subdomain.
+        Returns a URI in the format:
+        https://<prefix>.outlook.office365.com/adminapi/beta/<TenantId>/InvokeCommand
+    .PARAMETER TenantId
+        The Azure AD tenant ID.
+    .PARAMETER TenantDomain
+        The tenant domain (e.g., contoso.onmicrosoft.com).
+    .PARAMETER M365Environment
+        The M365 environment (commercial, gcc, gcchigh, dod).
+    .PARAMETER AccessToken
+        The OAuth2 access token for Exchange Online.
+    .FUNCTIONALITY
+        Internal
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -107,6 +134,24 @@ function Get-ExchangeOnlineApiEndpoint {
 }
 
 function Invoke-EXORestMethod {
+    <#
+    .SYNOPSIS
+        Invokes an Exchange Online cmdlet via the Admin REST API.
+    .DESCRIPTION
+        Calls the Exchange Online AdminApi InvokeCommand endpoint with the specified
+        cmdlet name. The backend API expects the cmdlet name as a parameter in the
+        request body and returns the results as JSON.
+    .PARAMETER CmdletName
+        The Exchange Online cmdlet to invoke (e.g., "Get-RemoteDomain", "Get-OrganizationConfig").
+    .PARAMETER ApiEndpoint
+        The fully-qualified InvokeCommand endpoint URI.
+    .PARAMETER AccessToken
+        The OAuth2 access token for Exchange Online.
+    .PARAMETER Parameters
+        Optional hashtable of parameters to pass to the cmdlet.
+    .FUNCTIONALITY
+        Internal
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
