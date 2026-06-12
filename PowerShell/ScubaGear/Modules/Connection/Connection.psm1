@@ -111,12 +111,15 @@ function Connect-Tenant {
                            $AADAuthRequired = $false
                        }
 
+                       # Resolve tenant info if not already cached
                        if ([string]::IsNullOrEmpty($TenantName)) {
                            $OrgDetails = (Invoke-GraphDirectly -Commandlet Get-MgBetaOrganization -M365Environment $M365Environment).Value
                            $InitialDomain = $OrgDetails.VerifiedDomains | Where-Object { $_.isInitial }
                            $TenantName = $InitialDomain.Name
+                           $InitialDomainPrefix = $TenantName.split(".")[0]
                        }
 
+                       # Acquire Exchange Online access token
                        $EXOScope = Get-ExchangeOnlineScope -M365Environment $M365Environment
                        if ($ServicePrincipalParams.CertThumbprintParams) {
                            $TokenData.EXOAccessToken = Get-MsalAccessToken `
@@ -142,15 +145,17 @@ function Connect-Tenant {
                            -M365Environment $M365Environment `
                            -AccessToken $TokenData.EXOAccessToken
 
+                       # EXO product checks use REST; only establish an EXO module session
+                       # when the exo product is part of the requested product list.
                        if ($RequiresExoSession) {
-                           $EXOHelperParams = @{
-                               M365Environment = $M365Environment;
-                           }
-                           if ($ServicePrincipalParams) {
-                               $EXOHelperParams += @{ServicePrincipalParams = $ServicePrincipalParams}
+                           $EXOHelperParams = @{ M365Environment = $M365Environment }
+                           if ($ServicePrincipalParams.CertThumbprintParams) {
+                               $EXOHelperParams += @{ ServicePrincipalParams = $ServicePrincipalParams }
                            }
                            Connect-EXOHelper @EXOHelperParams
                        }
+
+                       Write-Verbose "Exchange Online token and endpoint acquired successfully"
                        $EXOAuthRequired = $false
                    }
                }
