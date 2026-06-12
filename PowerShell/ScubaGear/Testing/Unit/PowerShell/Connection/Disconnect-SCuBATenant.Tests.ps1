@@ -8,8 +8,6 @@ InModuleScope Connection {
         BeforeAll {
             function Disconnect-MgGraph {throw 'this will be mocked'}
             Mock -ModuleName Connection Disconnect-MgGraph {}
-            function Disconnect-ExchangeOnline {throw 'this will be mocked'}
-            Mock -ModuleName Connection Disconnect-ExchangeOnline {}
             # SharePoint uses REST API - no SPO module disconnect needed
             function Remove-PowerAppsAccount {throw 'this will be mocked'}
             Mock  -ModuleName Connection Remove-PowerAppsAccount {}
@@ -22,8 +20,8 @@ InModuleScope Connection {
             Should -Invoke -ModuleName Connection -CommandName Disconnect-MgGraph -Times 1 -Exactly
         }
         It 'Disconnects from Exchange Online' {
-            Disconnect-SCuBATenant -ProductNames 'exo'
-            Should -Invoke -ModuleName Connection -CommandName Disconnect-ExchangeOnline -Times 1 -Exactly
+            # EXO uses REST API with on-demand token - no persistent connection to disconnect
+            {Disconnect-SCuBATenant -ProductNames 'exo'} | Should -Not -Throw
         }
         It 'Disconnects from Security Suite (Exchange Online and Security & Compliance)' {
             {Disconnect-SCuBATenant -ProductNames 'securitysuite'} | Should -Not -Throw
