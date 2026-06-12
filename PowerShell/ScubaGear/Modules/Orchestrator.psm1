@@ -22,8 +22,8 @@ function Invoke-SCuBA {
     This parameter is used to authenticate to the different commercial/government environments.
     Valid values include "commercial", "gcc", "gcchigh", or "dod".
     - For M365 tenants with E3/E5 licenses enter the value **"commercial"**.
-    - For M365 Government Commercial Cloud tenants with G3/G5 licenses enter the value **"gcc"**.
-    - For M365 Government Commercial Cloud High tenants enter the value **"gcchigh"**.
+    - For M365 Government Community Cloud tenants with G3/G5 licenses enter the value **"gcc"**.
+    - For M365 Government Community Cloud High tenants enter the value **"gcchigh"**.
     - For M365 Department of Defense tenants enter the value **"dod"**.
     Default value is 'commercial'.
     .Parameter OPAPath
@@ -127,7 +127,7 @@ function Invoke-SCuBA {
     'dod' teams endpoint.
     .Example
     Invoke-SCuBA -ProductNames aad,exo -M365Environment gcc -OPAPath . -OutPath . -DisconnectOnExit
-    Run the tool against Azure Active Directory and Exchange Online security
+    Run the tool against Entra Id and Exchange Online security
     baselines, disconnecting connections for those products when complete.
     .Example
     Invoke-SCuBA -ProductNames * -CertificateThumbprint <insert-thumbprint> -AppID <insert-appid> -Organization "tenant.onmicrosoft.com"
@@ -472,7 +472,7 @@ function Invoke-SCuBA {
             Write-ScubaLog -Message "ScubaGear logging initialized" -Level "Info" -Source "InvokeScuba" -Data @{
                 Version = $ModuleVersion
                 ProductNames = ($ProductNames -join ', ')
-                Environment = $M365Environment
+                UserPassedEnvironment = $M365Environment
                 OutputFolder = $OutFolderPath
                 LogFolder = $ScubaLogFolder
                 TranscriptEnabled = $Transcript
@@ -515,6 +515,14 @@ function Invoke-SCuBA {
             }
             Write-Warning "Failed to initialize ScubaGear logging: $_"
             $Script:ScubaLoggingEnabled = $false
+        }
+
+        # If user is authenticating with service principal, automatically detect the M365Environment using Microsoft's openid-configuration API
+        # This overrides any user provided command line value for M365Environment and the default value of "commercial"
+        if ($ScubaConfig.CertificateThumbprint -or $ScubaConfig.AppID) {
+            # Get-ServicePrincipalParams will validate that CertificateThumbprint, AppID, and Organization are all provided
+            $null = Get-ServicePrincipalParams -ScubaConfig $ScubaConfig
+            $ScubaConfig.M365Environment = Get-M365EnvironmentByDomain -TenantDomain $ScubaConfig.Organization
         }
 
         # Product Authentication - parameters consolidated into ScubaConfig
@@ -1893,41 +1901,6 @@ function Compare-ProductList {
     }
 }
 
-function Get-ServicePrincipalParams {
-    <#
-    .Description
-    Returns a valid a hastable of parameters for authentication via
-    Service Principal. Throws an error if there are none.
-    .Functionality
-    Internal
-    #>
-    [CmdletBinding()]
-    param(
-    [Parameter(Mandatory=$true)]
-    [ValidateNotNullOrEmpty()]
-    [object]
-    $ScubaConfig
-    )
-
-    $ServicePrincipalParams = @{}
-
-    $CheckThumbprintParams = ($ScubaConfig.CertificateThumbprint) `
-    -and ($ScubaConfig.AppID) -and ($ScubaConfig.Organization)
-
-    if ($CheckThumbprintParams) {
-        $CertThumbprintParams = @{
-            CertificateThumbprint = $ScubaConfig.CertificateThumbprint;
-            AppID = $ScubaConfig.AppID;
-            Organization = $ScubaConfig.Organization;
-        }
-        $ServicePrincipalParams += @{CertThumbprintParams = $CertThumbprintParams}
-    }
-    else {
-        throw "When authenticating with Service Principal authentication, the following command line parameters must be provided: -AppID, -CertificateThumbprint and -Organization."
-    }
-    $ServicePrincipalParams
-}
-
 function Import-Resources {
     <#
     .Description
@@ -1957,7 +1930,7 @@ function Import-Resources {
 
         @('Connection', 'RunRego', 'CreateReport', 'ScubaConfig', 'Support', 'Utility') | ForEach-Object {
             $ModulePath = Join-Path -Path $PSScriptRoot -ChildPath $_ -ErrorAction 'Stop'
-            Write-Debug "Importing $_ module"
+            Write-Debug "Importing $_ module $ModulePath"
             Import-Module -Name $ModulePath
         }
 
@@ -2029,8 +2002,8 @@ function Invoke-SCuBACached {
     This parameter is used to authenticate to the different commercial/government environments.
     Valid values include "commercial", "gcc", "gcchigh", or "dod".
     For M365 tenants with E3/E5 licenses enter the value **"commercial"**.
-    For M365 Government Commercial Cloud tenants with G3/G5 licenses enter the value **"gcc"**.
-    For M365 Government Commercial Cloud High tenants enter the value **"gcchigh"**.
+    For M365 Government community cloud tenants with G3/G5 licenses enter the value **"gcc"**.
+    For M365 Government community cloud High tenants enter the value **"gcchigh"**.
     For M365 Department of Defense tenants enter the value **"dod"**.
     Default is 'commercial'.
     .Parameter OPAPath
@@ -2288,7 +2261,7 @@ function Invoke-SCuBACached {
                 Write-ScubaLog -Message "ScubaGear logging initialized (Cached Mode)" -Level "Info" -Source "ScubaCached" -Data @{
                     Version = $ModuleVersion
                     ProductNames = ($ProductNames -join ', ')
-                    Environment = $M365Environment
+                    UserPassedEnvironment = $M365Environment
                     OutputFolder = $OutFolderPath
                     LogFolder = $ScubaLogFolder
                     ExportProvider = $ExportProvider
@@ -2354,6 +2327,14 @@ function Invoke-SCuBACached {
                 'NumberOfUUIDCharactersToTruncate' = $NumberOfUUIDCharactersToTruncate
             }
 
+            # If user is authenticating with service principal, automatically detect the M365Environment using Microsoft's openid-configuration API
+            # This overrides any user provided command line value for M365Environment and the default value of "commercial"
+            if ($TempScubaConfig.CertificateThumbprint -or $TempScubaConfig.AppID) {
+                # Get-ServicePrincipalParams will validate that CertificateThumbprint, AppID, and Organization are all provided
+                $null = Get-ServicePrincipalParams -ScubaConfig $TempScubaConfig
+                $TempScubaConfig.M365Environment = Get-M365EnvironmentByDomain -TenantDomain $TempScubaConfig.Organization
+            }
+
             try {
                 if ($ExportProvider) {
                     Write-ScubaLog -Message "ExportProvider enabled - will authenticate and export provider data" -Level "Info" -Source "ScubaCached"
@@ -2371,7 +2352,7 @@ function Invoke-SCuBACached {
                 # logging product authentication start with details on which products are being authenticated, the environment, and whether service principal auth is being used
                 Write-ScubaLog -Message "Starting product authentication" -Level "Info" -Source "ScubaCached" -Data @{
                     ProductNames = ($ProductNames -join ', ')
-                    M365Environment = $M365Environment
+                    M365Environment = $TempScubaConfig.M365Environment
                     UsesServicePrincipal = ($null -ne $TempScubaConfig.AppID)
                 }
 
