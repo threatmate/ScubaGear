@@ -1400,8 +1400,8 @@ Function Show-SCuBABaselinePolicyViewer {
         }
 
         $pullOnline = $uiConfig -and $uiConfig.PullOnlineBaselines
-        $syncHash.UIConfigs.LocalBaselineSchemaPath = if ($uiConfig -and $uiConfig.LocalBaselineSchemaPath) { $uiConfig.LocalBaselineSchemaPath } else { "..\..\schemas\ScubaBaselines.json" }
-        $SchemaBaselinePath = Join-Path $PSScriptRoot $syncHash.UIConfigs.LocalBaselineSchemaPath
+        $localBaselineSchemaPath = if ($uiConfig -and $uiConfig.LocalBaselineSchemaPath) { $uiConfig.LocalBaselineSchemaPath } else { "..\..\schemas\ScubaBaselines.json" }
+        $SchemaBaselinePath = Join-Path $PSScriptRoot $localBaselineSchemaPath
 
         if (-not $BaselineDirectory -and -not $GitHubDirectoryUrl) {
             if ($pullOnline) {
