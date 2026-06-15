@@ -28,7 +28,16 @@ class CommandTracker {
         }
 
         $isGraphDirect = $false
+        $TrackedCommand = $Command
         $Result = @()
+
+        # EXO REST calls are executed through a shared wrapper, but downstream report logic
+        # expects the underlying EXO cmdlet name when checking command dependencies.
+        if ($Command -eq "Invoke-EXORestMethod" -and
+            $CommandArgs.ContainsKey("CmdletName") -and
+            -not [string]::IsNullOrWhiteSpace($CommandArgs.CmdletName)) {
+            $TrackedCommand = $CommandArgs.CmdletName
+        }
 
         # Pre-process command arguments
         if ($CommandArgs.ContainsKey("GraphDirect")) {
@@ -59,7 +68,7 @@ class CommandTracker {
                 $Result = & $Command @CommandArgs
             }
 
-            $this.SuccessfulCommands += $Command
+            $this.SuccessfulCommands += $TrackedCommand
         }
         catch {
             if (-not $SuppressWarning) {
@@ -73,7 +82,7 @@ class CommandTracker {
                 StackTrace = $_.ScriptStackTrace
             }
 
-            $this.UnSuccessfulCommands += $Command
+            $this.UnSuccessfulCommands += $TrackedCommand
             $Result = @()
         }
 

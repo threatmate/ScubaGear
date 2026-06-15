@@ -847,7 +847,13 @@ function Invoke-ProviderList {
                             $RetVal = Export-AADProvider -M365Environment $ScubaConfig.M365Environment | Select-Object -Last 1
                         }
                         "exo" {
-                            $RetVal = Export-EXOProvider -PreferredDnsResolvers $ScubaConfig.PreferredDnsResolvers -SkipDoH $ScubaConfig.SkipDoH | Select-Object -Last 1
+                            $EXOProviderParams = @{
+                                'PreferredDnsResolvers' = $ScubaConfig.PreferredDnsResolvers
+                                'SkipDoH'               = $ScubaConfig.SkipDoH
+                                'AccessToken'           = $ConnectionResult.EXOAccessToken
+                                'ApiEndpoint'           = $ConnectionResult.EXOApiEndpoint
+                            }
+                            $RetVal = Export-EXOProvider @EXOProviderParams | Select-Object -Last 1
                         }
                         "defender" {
                             if ([string]::IsNullOrEmpty($ConnectionResult.EXOAccessToken) -or [string]::IsNullOrEmpty($ConnectionResult.EXOApiEndpoint)) {
@@ -1800,7 +1806,9 @@ function Get-TenantDetail {
         Get-PowerPlatformTenantDetail -M365Environment $M365Environment
     }
     elseif ($ProductNames.Contains("exo")) {
-        Get-EXOTenantDetail -M365Environment $M365Environment
+        Get-EXOTenantDetail -M365Environment $M365Environment `
+            -AccessToken $ConnectionResult.EXOAccessToken `
+            -ApiEndpoint $ConnectionResult.EXOApiEndpoint
     }
     elseif ($ProductNames.Contains("defender") -or $ProductNames.Contains("securitysuite")) {
         Get-EXOTenantDetailFromConnection -ConnectionResult $ConnectionResult
