@@ -459,8 +459,9 @@ function Get-OPAFile {
     $OutFile = ( Join-Path $ScubaTools $OPAExe ) #(Join-Path (Get-Location).Path $OPAExe)
 
     try {
-        $Display = "Downloading OPA executable"
-        Start-BitsTransfer -Source $InstallUrl -Destination $OutFile -DisplayName $Display -MaxDownloadTime 300
+        # Start-BitsTransfer is Windows-only and fails on Linux (Alpine container); use the
+        # cross-platform Invoke-WebRequest so OPA can be (re)downloaded on Linux as well.
+        Invoke-WebRequest -Uri $InstallUrl -OutFile $OutFile -TimeoutSec 300
         Write-Information -MessageData "Installed the specified OPA version (${ExpectedVersion}) to ${OutFile}" | Out-Host
     }
     catch {
