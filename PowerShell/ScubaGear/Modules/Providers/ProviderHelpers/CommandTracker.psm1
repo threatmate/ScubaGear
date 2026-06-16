@@ -7,7 +7,7 @@ Import-Module -Name $PSScriptRoot/PowerPlatformRestHelper.psm1 -Function Get-Pow
 Import-Module -Name $PSScriptRoot/SPORestHelper.psm1 -Function Get-SPOTenantRest
 Import-Module -Name $PSScriptRoot/../../Utility/Utility.psm1 -Function Invoke-GraphDirectly, ConvertFrom-GraphHashtable
 Import-Module -Name $PSScriptRoot/AADAppManagementPolicyHelper.psm1 -Function Get-AppManagementPolicies
-Import-Module -Name $PSScriptRoot/../../Utility/ScubaLogging.psm1 -Function Write-ScubaLog
+Import-Module -Name $PSScriptRoot/../../Utility/ScubaLogging.psm1 -Function Write-ScubaLog, Trace-ScubaFunction
 
 class CommandTracker {
     [string[]]$SuccessfulCommands = @()
@@ -55,7 +55,9 @@ class CommandTracker {
             if ($isGraphDirect) {
                 # This will pull the Graph API vice the PowerShell module
                 Write-Verbose "Running $($Command) API Call"
-                $ModCommand = Invoke-GraphDirectly -Commandlet $Command @CommandArgs
+                $ModCommand = Trace-ScubaFunction -FunctionName $TrackedCommand -LogErrors $false -ScriptBlock {
+                    Invoke-GraphDirectly -Commandlet $Command @CommandArgs
+                }
                 $Result = $ModCommand
 
                 # Check if $Result.value exists, if it does, return it if not return just $Result
@@ -65,7 +67,9 @@ class CommandTracker {
             }
             else {
                 Write-Verbose "Running $($Command) with arguments: $($CommandArgs)"
-                $Result = & $Command @CommandArgs
+                $Result = Trace-ScubaFunction -FunctionName $TrackedCommand -LogErrors $false -ScriptBlock {
+                    & $Command @CommandArgs
+                }
             }
 
             $this.SuccessfulCommands += $TrackedCommand
