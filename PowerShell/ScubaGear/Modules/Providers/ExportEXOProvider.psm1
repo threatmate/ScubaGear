@@ -2,7 +2,7 @@ function Export-EXOProvider {
     <#
     .Description
     Gets the Exchange Online (EXO) settings that are relevant
-    to the SCuBA EXO baselines using the EXO PowerShell Module
+    to the SCuBA EXO baselines using direct REST API calls.
     .Functionality
     Internal
     #>
