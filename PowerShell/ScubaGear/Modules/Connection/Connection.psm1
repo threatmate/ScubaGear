@@ -356,6 +356,15 @@
                            ApplicationId = $ServicePrincipalParams.CertThumbprintParams.AppID;
                            TenantId  = $ServicePrincipalParams.CertThumbprintParams.Organization; # Organization Domain is actually required here.
                        }
+                       if (-not $IsWindows -and $TeamsConnectToTenant.CertificateThumbprint) {
+                           # LINUX FIX: Connect-MicrosoftTeams has no -CertificateThumbprint on Linux; -Certificate takes an X509Certificate2.
+                           $__tp = $TeamsConnectToTenant.CertificateThumbprint
+                           $TeamsConnectToTenant.Remove('CertificateThumbprint') | Out-Null
+                           $__st = [System.Security.Cryptography.X509Certificates.X509Store]::new('My','CurrentUser')
+                           $__st.Open('ReadOnly')
+                           $TeamsConnectToTenant['Certificate'] = ($__st.Certificates | Where-Object { $_.Thumbprint -eq $__tp } | Select-Object -First 1)
+                           $__st.Close()
+                       }
                        $TeamsParams += $TeamsConnectToTenant
                    }
                    switch ($M365Environment) {

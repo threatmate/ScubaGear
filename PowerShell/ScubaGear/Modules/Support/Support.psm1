@@ -1033,7 +1033,7 @@ function Test-ScubaGearVersion {
 
             # Check if admin rights needed
             $programFilesModules = $modules | Where-Object { $_.ModuleBase -like "$env:ProgramFiles*" }
-            $scubaGearStatus.AdminRequired = $programFilesModules -and -not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+            $scubaGearStatus.AdminRequired = $programFilesModules -and -not ($IsLinux -or $IsMacOS -or ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
 
             if ($scubaGearStatus.CurrentVersion -lt $scubaGearStatus.LatestVersion) {
                 $scubaGearStatus.Status = "Update Available"
@@ -1235,7 +1235,7 @@ function Get-DependencyStatus {
         Recommendations = @()
     }
 
-    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+    $isAdmin = ($IsLinux -or $IsMacOS -or ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
 
     foreach ($requiredModule in $ModuleList) {
         $moduleName = $requiredModule.ModuleName
@@ -1531,7 +1531,7 @@ function Reset-ScubaGearDependencies {
         WhatIfMode = $WhatIfPreference
         Scope = $Scope
         AdminRequired = $false
-        AdminAvailable = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+        AdminAvailable = ($IsLinux -or $IsMacOS -or ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
 
         # Module status by action needed
         ModulesUpToDate = @()
@@ -1887,7 +1887,7 @@ function Update-ScubaGearFromPSGallery {
 
     # Check admin requirements
     $programFilesModules = $modules | Where-Object { $_.ModuleBase -like "$env:ProgramFiles*" }
-    $adminNeeded = $programFilesModules -and -not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+    $adminNeeded = $programFilesModules -and -not ($IsLinux -or $IsMacOS -or ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
 
     if ($adminNeeded) {
         throw "Administrator privileges required to update modules in Program Files. Please run as Administrator."
@@ -1961,7 +1961,7 @@ function Update-ScubaGearFromGitHub {
         $latestRelease = (Invoke-RestMethod -Uri "https://api.github.com/repos/cisagov/ScubaGear/releases/latest").tag_name.replace("v","")
 
         # Check admin requirements for AllUsers scope
-        $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+        $isAdmin = ($IsLinux -or $IsMacOS -or ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
         if ($Scope -eq 'AllUsers' -and -not $isAdmin) {
             throw "Administrator privileges required for AllUsers scope installation."
         }

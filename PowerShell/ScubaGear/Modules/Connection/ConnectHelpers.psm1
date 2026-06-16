@@ -82,6 +82,15 @@ function Connect-EXOHelper {
 
     if ($ServicePrincipalParams.CertThumbprintParams) {
         $EXOParams += $ServicePrincipalParams.CertThumbprintParams
+        if (-not $IsWindows -and $EXOParams.CertificateThumbprint) {
+            # LINUX FIX: Connect-ExchangeOnline has no -CertificateThumbprint on Linux; pass a cert object.
+            $__tp = $EXOParams.CertificateThumbprint
+            $EXOParams.Remove('CertificateThumbprint') | Out-Null
+            $__st = [System.Security.Cryptography.X509Certificates.X509Store]::new('My','CurrentUser')
+            $__st.Open('ReadOnly')
+            $EXOParams['Certificate'] = ($__st.Certificates | Where-Object { $_.Thumbprint -eq $__tp } | Select-Object -First 1)
+            $__st.Close()
+        }
     }
     Connect-ExchangeOnline @EXOParams | Out-Null
 }
@@ -122,6 +131,15 @@ function Connect-DefenderHelper {
     }
     if ($ServicePrincipalParams.CertThumbprintParams) {
         $IPPSParams += $ServicePrincipalParams.CertThumbprintParams
+        if (-not $IsWindows -and $IPPSParams.CertificateThumbprint) {
+            # LINUX FIX: Connect-IPPSSession has no -CertificateThumbprint on Linux; pass a cert object.
+            $__tp = $IPPSParams.CertificateThumbprint
+            $IPPSParams.Remove('CertificateThumbprint') | Out-Null
+            $__st = [System.Security.Cryptography.X509Certificates.X509Store]::new('My','CurrentUser')
+            $__st.Open('ReadOnly')
+            $IPPSParams['Certificate'] = ($__st.Certificates | Where-Object { $_.Thumbprint -eq $__tp } | Select-Object -First 1)
+            $__st.Close()
+        }
     }
     Connect-IPPSSession @IPPSParams | Out-Null
 }
@@ -169,9 +187,11 @@ function Initialize-Msal {
         throw "Microsoft.Identity.Client.dll not found in the Microsoft.Graph.Authentication module directory."
     }
 
-    $Sig = Get-AuthenticodeSignature -FilePath $MsalDll.FullName
-    if ($Sig.Status -ne 'Valid') {
-        throw "Microsoft.Identity.Client.dll signature is not valid (status: $($Sig.Status)). Aborting MSAL load."
+    if ($IsWindows) {
+        $Sig = Get-AuthenticodeSignature -FilePath $MsalDll.FullName
+        if ($Sig.Status -ne 'Valid') {
+            throw "Microsoft.Identity.Client.dll signature is not valid (status: $($Sig.Status)). Aborting MSAL load."
+        }
     }
 
     Add-Type -Path $MsalDll.FullName
@@ -256,7 +276,11 @@ function Get-MsalAccessToken {
     if ($PSCmdlet.ParameterSetName -eq 'ServicePrincipal') {
         $Certificate = Get-ChildItem -Path "Cert:\CurrentUser\My\$CertificateThumbprint" -ErrorAction SilentlyContinue
         if (-not $Certificate) {
-            $Certificate = Get-ChildItem -Path "Cert:\LocalMachine\My\$CertificateThumbprint" -ErrorAction SilentlyContinue
+            # LINUX FIX: LocalMachine\My Cert: drive throws on Linux; read CurrentUser\My via the .NET X509Store.
+            $__store = [System.Security.Cryptography.X509Certificates.X509Store]::new('My','CurrentUser')
+            $__store.Open('ReadOnly')
+            $Certificate = $__store.Certificates | Where-Object { $_.Thumbprint -eq $CertificateThumbprint } | Select-Object -First 1
+            $__store.Close()
         }
         if (-not $Certificate) {
             throw "Certificate with thumbprint '$CertificateThumbprint' not found in CurrentUser or LocalMachine certificate stores."
